@@ -17,19 +17,14 @@ struct WorkoutPill: View {
     @Default(.showWorkoutGlance) private var showWorkoutGlance
 
     var body: some View {
-        if showWorkoutGlance, workout.isActive {
+        if showWorkoutGlance, workout.isActive, let last = workout.lastSet {
             NotchProPill(tint: .orange) {
                 HStack(spacing: 5) {
                     Image(systemName: "dumbbell.fill")
                         .font(.caption2)
-                        .symbolEffect(.pulse, options: .repeating, value: workout.isActive)
-                    Text(workout.elapsedDisplay)
-                        .font(.caption.weight(.bold).monospacedDigit())
-                    if let last = workout.lastSet {
-                        Text("· \(Int(last.weight))×\(last.reps)")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.75))
-                    }
+                    Text("\(last.exerciseName) \(last.displaySummary)")
+                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .lineLimit(1)
                 }
                 .foregroundStyle(.white.opacity(0.92))
             }
@@ -54,7 +49,6 @@ struct WorkoutPill: View {
 
 struct WorkoutExpandedView: View {
     @ObservedObject private var workout = WorkoutManager.shared
-    @State private var showExercisePicker = false
 
     var body: some View {
         NotchProCard(accent: .orange, accentOpacity: 0.28) {
@@ -77,21 +71,15 @@ struct WorkoutExpandedView: View {
                 Text("Gym")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                if workout.isActive {
-                    Text(workout.elapsedDisplay)
-                        .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.orange)
-                } else {
-                    Text("Weightlifting")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                }
+                Text(workout.isActive ? "Logging sets" : "Weightlifting")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
             }
             Spacer()
             if workout.isActive {
-                Text(formatVolume(workout.activeSession?.totalVolume ?? 0))
+                Text("\(workout.activeSetCount) sets")
                     .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(.orange)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color.orange.opacity(0.18)))
@@ -112,7 +100,7 @@ struct WorkoutExpandedView: View {
                         Spacer(minLength: 0)
                         HStack(spacing: 3) {
                             ForEach(group.sets) { set in
-                                Text("\(Int(set.weight))×\(set.reps)")
+                                Text(set.displaySummary)
                                     .font(.caption2.monospacedDigit())
                                     .padding(.horizontal, 5)
                                     .padding(.vertical, 2)
@@ -138,7 +126,7 @@ struct WorkoutExpandedView: View {
 
             Spacer()
 
-            Button("Finish") { workout.endWorkout() }
+            Button("Done") { workout.endWorkout() }
                 .buttonStyle(WorkoutChipStyle(tint: .red))
         }
     }
@@ -164,17 +152,9 @@ struct WorkoutExpandedView: View {
                     .lineLimit(1)
             }
 
-            Button {
-                workout.startWorkout()
-            } label: {
-                HStack {
-                    Image(systemName: "play.fill")
-                    Text("Start workout")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(WorkoutPrimaryStyle())
+            Text("Pick exercise, weight, and reps — first log starts your session.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
     }
 
@@ -243,27 +223,6 @@ struct WorkoutExpandedView: View {
     private func formatVolume(_ value: Double) -> String {
         if value >= 1000 { return String(format: "%.1fk lb", value / 1000) }
         return String(format: "%.0f lb", value)
-    }
-}
-
-private struct WorkoutPrimaryStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.caption)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.orange, Color.orange.opacity(0.75)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .foregroundStyle(.white)
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
     }
 }
 
