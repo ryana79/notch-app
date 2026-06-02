@@ -25,7 +25,7 @@ permissions:
 env:
   PROJECT_NAME: NotchPro
   XCODE_VERSION: "16.4"
-  APPCAST_URL: https://ryana79.github.io/notch-app/appcast.xml
+  APPCAST_URL: https://raw.githubusercontent.com/ryana79/notch-app/main/updater/appcast.xml
 
 jobs:
   publish:

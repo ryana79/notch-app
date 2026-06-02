@@ -1441,7 +1441,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "NotchPro uses the camera for the optional mirror feature";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Ryan Amir";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "NotchPro displays your reminders in the calendar view";
-				INFOPLIST_KEY_SUFeedURL = "https://ryana79.github.io/notch-app/appcast.xml";
+				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/ryana79/notch-app/main/updater/appcast.xml";
 				INFOPLIST_KEY_SUPublicEDKey = "oQYmVg2wZkaXZJuqCjPFSh7roOot3IqkayEJ0fcTlHg=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1496,7 +1496,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "NotchPro uses the camera for the optional mirror feature";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Ryan Amir";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "NotchPro displays your reminders in the calendar view";
-				INFOPLIST_KEY_SUFeedURL = "https://ryana79.github.io/notch-app/appcast.xml";
+				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/ryana79/notch-app/main/updater/appcast.xml";
 				INFOPLIST_KEY_SUPublicEDKey = "oQYmVg2wZkaXZJuqCjPFSh7roOot3IqkayEJ0fcTlHg=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
