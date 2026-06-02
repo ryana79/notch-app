@@ -161,3 +161,7 @@ struct NotchAmbientGlow: View {
         }
     }
 }
+
+func formatBatteryPercent(_ level: Float) -> String {
+    "\(Int(level.rounded()))%"
+}

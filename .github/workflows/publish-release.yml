@@ -1,0 +1,255 @@
+name: Publish NotchPro Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Marketing version (e.g. 1.0.1)"
+        required: true
+      build_number:
+        description: "Build number (optional, defaults to run number)"
+        required: false
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: publish-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  PROJECT_NAME: NotchPro
+  XCODE_VERSION: "16.4"
+  APPCAST_URL: https://ryana79.github.io/notch-app/appcast.xml
+
+jobs:
+  publish:
+    name: Build, release, and update appcast
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_BUILD: ${{ inputs.build_number }}
+          REF_NAME: ${{ github.ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "push" && "$REF_NAME" == refs/tags/v* ]]; then
+            VERSION="${REF_NAME#refs/tags/v}"
+          else
+            VERSION="$INPUT_VERSION"
+          fi
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Version is required"
+            exit 1
+          fi
+          BUILD_NUMBER="$INPUT_BUILD"
+          if [[ -z "$BUILD_NUMBER" ]]; then
+            BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Publishing NotchPro v${VERSION} (${BUILD_NUMBER})"
+
+      - name: Verify Sparkle secret
+        run: |
+          if [[ -z "${{ secrets.PRIVATE_SPARKLE_KEY }}" ]]; then
+            echo "::error::Add repository secret PRIVATE_SPARKLE_KEY (see Configuration/sparkle/SETUP.md)"
+            exit 1
+          fi
+
+      - name: Prepare broker credentials for CI
+        run: cp NotchPro/Resources/BrokerCredentials.example.plist NotchPro/Resources/BrokerCredentials.plist
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project ${{ env.PROJECT_NAME }}.xcodeproj
+
+      - name: Install Apple certificate
+        if: ${{ secrets.BUILD_CERTIFICATE_BASE64 != '' }}
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/build_certificate.p12"
+          KC="$RUNNER_TEMP/app-signing.keychain-db"
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KC"
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security list-keychain -d user -s "$KC"
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [[ ! -d "$XCODE_PATH" ]]; then
+            XCODE_PATH="/Applications/Xcode.app"
+          fi
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+
+      - name: Set version and build number
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+        run: |
+          PBXPROJ="${{ env.PROJECT_NAME }}.xcodeproj/project.pbxproj"
+          sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = ${VERSION}/g" "$PBXPROJ"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER}/g" "$PBXPROJ"
+
+      - name: Build Release app
+        env:
+          DEVELOPMENT_TEAM: ${{ vars.DEVELOPMENT_TEAM_ID }}
+          HAS_CERT: ${{ secrets.BUILD_CERTIFICATE_BASE64 != '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p Release
+          SIGN_IDENTITY="-"
+          if [[ "$HAS_CERT" == "true" ]]; then
+            SIGN_IDENTITY="Apple Development"
+          fi
+          xcodebuild \
+            -project ${{ env.PROJECT_NAME }}.xcodeproj \
+            -scheme ${{ env.PROJECT_NAME }} \
+            -configuration Release \
+            -destination "generic/platform=macOS" \
+            CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
+            DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}" \
+            ONLY_ACTIVE_ARCH=NO \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            build
+          APP_PATH="$(find "$RUNNER_TEMP/DerivedData" -path "*/Release/${{ env.PROJECT_NAME }}.app" -type d | head -1)"
+          if [[ ! -d "$APP_PATH" ]]; then
+            echo "::error::Could not find built .app"
+            exit 1
+          fi
+          ditto "$APP_PATH" "Release/${{ env.PROJECT_NAME }}.app"
+          if [[ "$SIGN_IDENTITY" == "-" ]]; then
+            codesign --force --deep --sign - "Release/${{ env.PROJECT_NAME }}.app"
+          fi
+
+      - name: Create DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          VENV_DIR="$RUNNER_TEMP/venv"
+          python3 -m venv "$VENV_DIR"
+          source "$VENV_DIR/bin/activate"
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install --require-hashes -r Configuration/dmg/requirements.txt
+          chmod +x Configuration/dmg/create_dmg.sh
+          ./Configuration/dmg/create_dmg.sh \
+            "Release/${{ env.PROJECT_NAME }}.app" \
+            "Release/${{ env.PROJECT_NAME }}.dmg" \
+            "${{ env.PROJECT_NAME }} ${VERSION}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Release v${VERSION} already exists"
+            exit 1
+          fi
+          gh release create "v${VERSION}" "Release/${{ env.PROJECT_NAME }}.dmg" \
+            --title "NotchPro v${VERSION}" \
+            --notes "Download NotchPro.dmg and drag to Applications. Updates are delivered automatically via Sparkle."
+
+      - name: Build Sparkle generate_appcast
+        run: |
+          set -euo pipefail
+          SPARKLE_METADATA_PATH="NotchPro.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+          SPARKLE_SRC="$RUNNER_TEMP/Sparkle"
+          SPARKLE_DERIVED="$RUNNER_TEMP/sparkle-derived"
+          SPARKLE_REPO_URL="https://github.com/sparkle-project/Sparkle"
+
+          IFS=$'\t' read -r SPARKLE_VERSION SPARKLE_REVISION <<< "$(python3 - "$SPARKLE_METADATA_PATH" <<'PY'
+          import json, sys
+          from pathlib import Path
+          data = json.loads(Path(sys.argv[1]).read_text())
+          sparkle = next(p for p in data.get("pins", []) if p.get("identity") == "sparkle")
+          state = sparkle.get("state", {})
+          print(state.get("version", ""), state.get("revision", ""))
+          PY
+          )"
+
+          SPARKLE_TAG=""
+          for candidate in "$SPARKLE_VERSION" "v$SPARKLE_VERSION"; do
+            if git ls-remote --exit-code --tags "$SPARKLE_REPO_URL" "refs/tags/$candidate" >/dev/null 2>&1; then
+              SPARKLE_TAG="$candidate"
+              break
+            fi
+          done
+          git clone --depth 1 --branch "$SPARKLE_TAG" "$SPARKLE_REPO_URL" "$SPARKLE_SRC"
+          xcodebuild -project "$SPARKLE_SRC/Sparkle.xcodeproj" \
+            -scheme generate_appcast \
+            -configuration Release \
+            -derivedDataPath "$SPARKLE_DERIVED" \
+            build
+          install -m 0755 "$SPARKLE_DERIVED/Build/Products/Release/generate_appcast" "$RUNNER_TEMP/generate_appcast"
+
+      - name: Generate signed appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.PRIVATE_SPARKLE_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "NotchPro v${VERSION}" > Release/NotchPro.html
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | "$RUNNER_TEMP/generate_appcast" \
+            --ed-key-file - \
+            --link "https://github.com/${REPO}/releases" \
+            --download-url-prefix "https://github.com/${REPO}/releases/download/v${VERSION}/" \
+            --embed-release-notes \
+            -o updater/appcast.xml \
+            Release/
+
+      - name: Commit appcast
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add updater/appcast.xml
+          git commit -m "Update appcast for v${VERSION}" || true
+          git push origin HEAD:main || true
+
+      - name: Deploy appcast to GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: updater/
+      - uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        id: pages
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
+          PAGE_URL: ${{ steps.pages.outputs.page_url }}
+          APPCAST_URL: ${{ env.APPCAST_URL }}
+        run: |
+          {
+            echo "## NotchPro v${VERSION} published"
+            echo ""
+            echo "**Install link for friends:** https://github.com/${REPO}/releases/latest"
+            echo ""
+            echo "**Appcast:** ${APPCAST_URL}"
+            echo ""
+            echo "Pages URL: ${PAGE_URL:-see Actions Pages}"
+          } >> "$GITHUB_STEP_SUMMARY"

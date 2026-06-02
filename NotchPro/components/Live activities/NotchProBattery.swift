@@ -194,7 +194,7 @@ struct NotchProBatteryView: View {
         }) {
             HStack {
                 if Defaults[.showBatteryPercentage] {
-                    Text("\(Int32(levelBattery))%")
+                    Text(formatBatteryPercent(levelBattery))
                         .font(.callout)
                         .foregroundStyle(.white)
                 }

@@ -19,7 +19,12 @@ enum PanDirection {
 }
 
 extension View {
-    func panGesture(direction: PanDirection, threshold: CGFloat = 4, action: @escaping (CGFloat, NSEvent.Phase) -> Void) -> some View {
+    func panGesture(
+        direction: PanDirection,
+        threshold: CGFloat = 4,
+        onScrollInteraction: ((Bool) -> Void)? = nil,
+        action: @escaping (CGFloat, NSEvent.Phase) -> Void
+    ) -> some View {
         self
             .gesture(
                 DragGesture(minimumDistance: 0)
@@ -30,48 +35,70 @@ extension View {
                     }
                     .onEnded { _ in action(0, .ended) }
             )
-            .background(ScrollMonitor(direction: direction, threshold: threshold, action: action))
+            .background(
+                ScrollMonitor(
+                    direction: direction,
+                    threshold: threshold,
+                    onScrollInteraction: onScrollInteraction,
+                    action: action
+                )
+            )
     }
 }
 
 private struct ScrollMonitor: NSViewRepresentable {
     let direction: PanDirection
     let threshold: CGFloat
+    let onScrollInteraction: ((Bool) -> Void)?
     let action: (CGFloat, NSEvent.Phase) -> Void
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
+        context.coordinator.hostView = view
         context.coordinator.installMonitor(on: view)
         return view
     }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) { coordinator.removeMonitor() }
 
-    func makeCoordinator() -> Coordinator { 
-        Coordinator(direction: direction, threshold: threshold, action: action) 
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.hostView = nsView
+        context.coordinator.onScrollInteraction = onScrollInteraction
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.removeMonitor()
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(direction: direction, threshold: threshold, onScrollInteraction: onScrollInteraction, action: action)
     }
 
     @MainActor final class Coordinator: NSObject {
         private let direction: PanDirection
         private let threshold: CGFloat
+        var onScrollInteraction: ((Bool) -> Void)?
         private let action: (CGFloat, NSEvent.Phase) -> Void
+        weak var hostView: NSView?
         private var monitor: Any?
         private var accumulated: CGFloat = 0
         private var active = false
-            private var endTask: Task<Void, Never>?
+        private var endTask: Task<Void, Never>?
         private let noiseThreshold: CGFloat = 0.2
 
-        init(direction: PanDirection, threshold: CGFloat, action: @escaping (CGFloat, NSEvent.Phase) -> Void) {
+        init(
+            direction: PanDirection,
+            threshold: CGFloat,
+            onScrollInteraction: ((Bool) -> Void)?,
+            action: @escaping (CGFloat, NSEvent.Phase) -> Void
+        ) {
             self.direction = direction
             self.threshold = threshold
+            self.onScrollInteraction = onScrollInteraction
             self.action = action
         }
 
         private func scheduleEndTimeout() {
-            // Cancel any existing scheduled end and schedule a new one.
             endTask?.cancel()
             endTask = Task { @MainActor in
-                // If no new scroll event arrives within this window, consider the gesture ended.
                 try? await Task.sleep(for: .milliseconds(300))
                 guard !Task.isCancelled else { return }
                 if active {
@@ -81,6 +108,7 @@ private struct ScrollMonitor: NSViewRepresentable {
                 }
                 active = false
                 accumulated = 0
+                onScrollInteraction?(false)
             }
         }
 
@@ -102,6 +130,7 @@ private struct ScrollMonitor: NSViewRepresentable {
             active = false
             endTask?.cancel()
             endTask = nil
+            onScrollInteraction?(false)
         }
 
         private func handleScroll(_ event: NSEvent) {
@@ -113,19 +142,30 @@ private struct ScrollMonitor: NSViewRepresentable {
                 }
                 active = false
                 accumulated = 0
+                onScrollInteraction?(false)
                 return
             }
 
-            // Only consider scroll events that are primarily along the configured axis.
             let absDX = abs(event.scrollingDeltaX)
             let absDY = abs(event.scrollingDeltaY)
-            // Require the movement along the gesture axis to be at least 1.5x the orthogonal axis.
             let axisDominanceFactor: CGFloat = 1.5
-            let isAxisDominant: Bool = direction.isHorizontal ? (absDX >= axisDominanceFactor * absDY) : (absDY >= axisDominanceFactor * absDX)
+            let isAxisDominant: Bool = direction.isHorizontal
+                ? (absDX >= axisDominanceFactor * absDY)
+                : (absDY >= axisDominanceFactor * absDX)
             guard isAxisDominant else { return }
 
-            // Scale non-precise (mouse wheel) scrolling deltas so they feel similar to
-            // trackpad gestures.
+            if NotchScrollBoundary.shouldSuppressNotchGesture(
+                event: event,
+                hostView: hostView,
+                direction: direction
+            ) {
+                onScrollInteraction?(true)
+                accumulated = 0
+                active = false
+                scheduleEndTimeout()
+                return
+            }
+
             let raw = direction.signed(deltaX: event.scrollingDeltaX, deltaY: event.scrollingDeltaY)
             let scale: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 8
             let s = raw * scale
@@ -134,11 +174,11 @@ private struct ScrollMonitor: NSViewRepresentable {
 
             if !active && accumulated >= threshold {
                 active = true
+                onScrollInteraction?(false)
                 action(accumulated.magnitude, .began)
             } else if active {
                 action(accumulated.magnitude, .changed)
             }
-            // Schedule a timeout to end the gesture if no further scroll events arrive.
             scheduleEndTimeout()
         }
     }

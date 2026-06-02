@@ -29,7 +29,7 @@ struct NotchStatusRail: View {
                     .font(.caption2)
                     .foregroundStyle(batteryTint)
                 if Defaults[.showBatteryPercentage] {
-                    Text("\(batteryModel.levelBattery)%")
+                    Text(formatBatteryPercent(batteryModel.levelBattery))
                         .font(.caption2.weight(.semibold).monospacedDigit())
                         .foregroundStyle(.white.opacity(0.85))
                 }

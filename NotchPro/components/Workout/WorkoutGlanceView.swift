@@ -33,76 +33,124 @@ struct WorkoutPill: View {
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .font(.caption2)
-                    Text(formatVolume(workout.todayVolume))
+                    Text(formatWorkoutVolume(workout.todayVolume))
                         .font(.caption.weight(.bold).monospacedDigit())
+                }
+                .foregroundStyle(.white.opacity(0.9))
+            }
+        } else if showWorkoutGlance {
+            NotchProPill(tint: .orange) {
+                HStack(spacing: 4) {
+                    Image(systemName: "dumbbell.fill")
+                        .font(.caption2)
+                    Text("Gym")
+                        .font(.caption2.weight(.semibold))
                 }
                 .foregroundStyle(.white.opacity(0.9))
             }
         }
     }
-
-    private func formatVolume(_ value: Double) -> String {
-        if value >= 1000 { return String(format: "%.1fk lb", value / 1000) }
-        return String(format: "%.0f lb", value)
-    }
 }
 
 struct WorkoutExpandedView: View {
     @ObservedObject private var workout = WorkoutManager.shared
+    @State private var showHistory = false
 
     var body: some View {
         NotchProCard(accent: .orange, accentOpacity: 0.28) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 headerRow
+                progressRow
+
+                if workout.isActive, !workout.setsGroupedByExercise().isEmpty {
+                    activeSetSummary
+                } else if !workout.isActive {
+                    idleContent
+                }
+
+                logSetRow
 
                 if workout.isActive {
-                    activeWorkoutContent
-                } else {
-                    idleContent
+                    activeControls
+                }
+
+                if !workout.historyByDay().isEmpty {
+                    historySection
                 }
             }
         }
-        .frame(minWidth: 190)
     }
 
     private var headerRow: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Gym")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(workout.isActive ? "Logging sets" : "Weightlifting")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+        Button {
+            if !workout.isActive {
+                workout.startWorkout()
             }
-            Spacer()
-            if workout.isActive {
-                Text("\(workout.activeSetCount) sets")
-                    .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.orange.opacity(0.18)))
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Gym")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(workout.isActive ? "Logging sets" : "Weightlifting")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                Spacer(minLength: 4)
+                if workout.isActive {
+                    Text("\(workout.activeSetCount) sets · Today")
+                        .font(.caption2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.orange.opacity(0.18)))
+                } else {
+                    Text("Tap to start")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.orange.opacity(0.85))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var progressRow: some View {
+        if workout.sessionsThisWeek > 0 || workout.todayVolume > 0 {
+            HStack(spacing: 8) {
+                if workout.sessionsThisWeek > 0 {
+                    Label("\(workout.sessionsThisWeek)/wk", systemImage: "calendar")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                if workout.todayVolume > 0 {
+                    Spacer(minLength: 0)
+                    Text(formatWorkoutVolume(workout.todayVolume))
+                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.orange.opacity(0.9))
+                }
             }
         }
     }
 
     @ViewBuilder
-    private var activeWorkoutContent: some View {
-        if !workout.setsGroupedByExercise().isEmpty {
-            VStack(spacing: 5) {
-                ForEach(workout.setsGroupedByExercise(), id: \.name) { group in
-                    HStack(spacing: 6) {
-                        Text(group.name)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
+    private var activeSetSummary: some View {
+        VStack(spacing: 4) {
+            ForEach(workout.setsGroupedByExercise(), id: \.name) { group in
+                HStack(spacing: 4) {
+                    Text(group.name)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineLimit(1)
+                        .frame(maxWidth: 72, alignment: .leading)
+                    ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 3) {
                             ForEach(group.sets) { set in
                                 Text(set.displaySummary)
                                     .font(.caption2.monospacedDigit())
-                                    .padding(.horizontal, 5)
+                                    .padding(.horizontal, 4)
                                     .padding(.vertical, 2)
                                     .background(Capsule().fill(Color.white.opacity(0.08)))
                                     .foregroundStyle(.secondary)
@@ -112,10 +160,10 @@ struct WorkoutExpandedView: View {
                 }
             }
         }
+    }
 
-        logSetRow
-
-        HStack(spacing: 8) {
+    private var activeControls: some View {
+        HStack(spacing: 6) {
             Button("Repeat") { workout.repeatLastSet() }
                 .buttonStyle(WorkoutChipStyle(tint: .orange))
                 .disabled(workout.lastSet == nil)
@@ -124,7 +172,7 @@ struct WorkoutExpandedView: View {
                 .buttonStyle(WorkoutChipStyle(tint: .white))
                 .disabled(workout.activeSession?.sets.isEmpty != false)
 
-            Spacer()
+            Spacer(minLength: 0)
 
             Button("Done") { workout.endWorkout() }
                 .buttonStyle(WorkoutChipStyle(tint: .red))
@@ -132,97 +180,183 @@ struct WorkoutExpandedView: View {
     }
 
     private var idleContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if workout.todayVolume > 0 {
-                HStack {
-                    Text("Today")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(formatVolume(workout.todayVolume))
-                        .font(.caption.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(.orange)
-                }
-            }
-
+        VStack(alignment: .leading, spacing: 4) {
             if let last = workout.lastSet {
-                Text("Last: \(last.exerciseName) \(Int(last.weight)) lb × \(last.reps)")
+                Text("Last (\(last.loggedDayLabel)): \(last.exerciseName) \(last.displaySummary)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
 
-            Text("Pick exercise, weight, and reps — first log starts your session.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            if let pr = workout.personalBest(for: workout.draftExercise.rawValue) {
+                Text("PR: \(formatWorkoutWeight(pr.weight)) lb × \(pr.reps)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.orange.opacity(0.85))
+            }
         }
     }
 
     private var logSetRow: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 5) {
             Menu {
                 ForEach(GymExercise.allCases) { exercise in
-                    Button(exercise.rawValue) { workout.draftExercise = exercise }
+                    Button(exercise.rawValue) { workout.selectExercise(exercise) }
                 }
             } label: {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: workout.draftExercise.symbol)
+                        .font(.caption2)
                     Text(workout.draftExercise.rawValue)
                         .lineLimit(1)
-                    Spacer()
+                    Spacer(minLength: 0)
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
+                        .font(.system(size: 8, weight: .semibold))
                 }
-                .font(.caption.weight(.medium))
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.white.opacity(0.9))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
                 .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
             }
             .menuStyle(.borderlessButton)
 
-            HStack(spacing: 8) {
-                setField(title: "Weight", text: $workout.draftWeight, suffix: "lb")
-                setField(title: "Reps", text: $workout.draftReps, suffix: nil)
+            HStack(spacing: 5) {
+                weightStepper
+                compactStepper(
+                    label: "Reps",
+                    value: "\(workout.draftReps)",
+                    onDecrement: { workout.adjustDraftReps(by: -1) },
+                    onIncrement: { workout.adjustDraftReps(by: 1) }
+                )
+
                 Button {
+                    if !workout.isActive { workout.startWorkout() }
                     workout.addSet()
                 } label: {
                     Image(systemName: "plus")
-                        .font(.caption.weight(.bold))
-                        .frame(width: 28, height: 28)
+                        .font(.caption2.weight(.bold))
+                        .frame(width: 26, height: 26)
                         .background(Circle().fill(Color.orange.opacity(0.85)))
                         .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
+                .disabled(workout.draftWeight <= 0)
             }
         }
     }
 
-    private func setField(title: String, text: Binding<String>, suffix: String?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-            HStack(spacing: 4) {
-                TextField(title, text: text)
-                    .textFieldStyle(.plain)
-                    .font(.caption.weight(.semibold).monospacedDigit())
-                    .frame(width: 44)
-                if let suffix {
-                    Text(suffix)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+    private var weightStepper: some View {
+        HStack(spacing: 3) {
+            stepperButton(systemName: "minus") { workout.adjustDraftWeight(by: -2.5) }
+            Menu {
+                if !workout.recentWeights(for: workout.draftExercise.rawValue).isEmpty {
+                    Section("Recent") {
+                        ForEach(workout.recentWeights(for: workout.draftExercise.rawValue), id: \.self) { weight in
+                            Button("\(formatWorkoutWeight(weight)) lb") {
+                                workout.setDraftWeight(weight)
+                            }
+                        }
+                    }
+                }
+                Section("Pick weight (lb)") {
+                    ForEach(workout.weightPickerOptions(), id: \.self) { weight in
+                        Button("\(formatWorkoutWeight(weight)) lb") {
+                            workout.setDraftWeight(weight)
+                        }
+                    }
+                }
+            } label: {
+                VStack(spacing: 0) {
+                    Text("Weight")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                    Text("\(formatWorkoutWeight(workout.draftWeight)) lb")
+                        .font(.caption2.weight(.bold).monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .menuStyle(.borderlessButton)
+            stepperButton(systemName: "plus") { workout.adjustDraftWeight(by: 2.5) }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+    }
+
+    private var historySection: some View {
+        DisclosureGroup(isExpanded: $showHistory) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(workout.historyByDay()) { day in
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text(day.displayDate)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                Spacer(minLength: 0)
+                                Text("\(day.setCount) sets · \(formatWorkoutVolume(day.totalVolume))")
+                                    .font(.caption2.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                            ForEach(day.sessions) { session in
+                                ForEach(session.sets) { set in
+                                    Text("\(set.exerciseName) · \(set.displaySummary)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+            .frame(maxHeight: 110)
+        } label: {
+            Text("Log history")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
     }
 
-    private func formatVolume(_ value: Double) -> String {
-        if value >= 1000 { return String(format: "%.1fk lb", value / 1000) }
-        return String(format: "%.0f lb", value)
+    private func compactStepper(
+        label: String,
+        value: String,
+        onDecrement: @escaping () -> Void,
+        onIncrement: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 3) {
+            stepperButton(systemName: "minus", action: onDecrement)
+            VStack(spacing: 0) {
+                Text(label)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                Text(value)
+                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            stepperButton(systemName: "plus", action: onIncrement)
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+    }
+
+    private func stepperButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 8, weight: .bold))
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.white.opacity(0.1)))
+                .foregroundStyle(.white.opacity(0.9))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -232,8 +366,8 @@ private struct WorkoutChipStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(Capsule().fill(tint.opacity(0.18)))
             .foregroundStyle(tint == .white ? Color.white.opacity(0.85) : tint)
             .opacity(configuration.isPressed ? 0.8 : 1)

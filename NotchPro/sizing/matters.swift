@@ -21,15 +21,25 @@ let openNotchSize: CGSize = .init(width: 640, height: 265)
 
 @MainActor func getOpenNotchSize() -> CGSize {
     var height: CGFloat = 220
-    if Defaults[.showCalendar] {
-        height = 295
-    } else if Defaults[.showPortfolioGlance] || Defaults[.showWorkoutGlance] {
-        height = 275
-    } else if Defaults[.showWeatherGlance] {
-        height = 255
+    var sideWidgets = 0
+
+    if Defaults[.showWeatherGlance] { sideWidgets += 1 }
+    if Defaults[.showPortfolioGlance] { sideWidgets += 1 }
+    if Defaults[.showWorkoutGlance] { sideWidgets += 1; height = max(height, 340) }
+    if Defaults[.showCalendar] { sideWidgets += 1; height = max(height, 320) }
+    if Defaults[.showFocusTimer] { sideWidgets += 1 }
+    if Defaults[.showSystemStats] { sideWidgets += 1 }
+
+    if sideWidgets >= 4 {
+        height = max(height, 330)
+    } else if sideWidgets >= 3 {
+        height = max(height, 305)
     } else if Defaults[.showFocusTimer] || Defaults[.showSystemStats] {
-        height = 245
+        height = max(height, 245)
+    } else if Defaults[.showWeatherGlance] {
+        height = max(height, 255)
     }
+
     return .init(width: 640, height: height)
 }
 

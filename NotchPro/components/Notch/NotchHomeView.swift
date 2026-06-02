@@ -197,7 +197,7 @@ struct MusicControlsView: View {
             )
             .fontWeight(.medium)
             if Defaults[.enableLyrics] {
-                TimelineView(.animation(minimumInterval: 0.25)) { timeline in
+                TimelineView(.animation(minimumInterval: lyricsTimelineInterval)) { timeline in
                     let currentElapsed: Double = {
                         guard musicManager.isPlaying else { return musicManager.elapsedTime }
                         let delta = timeline.date.timeIntervalSince(musicManager.timestampDate)
@@ -233,7 +233,7 @@ struct MusicControlsView: View {
     }
 
     private var musicSlider: some View {
-        TimelineView(.animation(minimumInterval: musicManager.playbackRate > 0 ? 0.1 : nil)) { timeline in
+        TimelineView(.animation(minimumInterval: sliderTimelineInterval)) { timeline in
             MusicSliderView(
                 sliderValue: $sliderValue,
                 duration: $musicManager.songDuration,
@@ -338,6 +338,18 @@ struct MusicControlsView: View {
         case .all, .one:
             return .red
         }
+    }
+
+    private var sliderTimelineInterval: TimeInterval? {
+        guard vm.notchState == .open, musicManager.isPlaying, musicManager.playbackRate > 0 else {
+            return nil
+        }
+        return 0.1
+    }
+
+    private var lyricsTimelineInterval: TimeInterval? {
+        guard vm.notchState == .open, musicManager.isPlaying else { return nil }
+        return 0.25
     }
 }
 
@@ -511,38 +523,63 @@ struct NotchHomeView: View {
     }
 
     private var infoColumnWidth: CGFloat {
-        if Defaults[.showCalendar] || Defaults[.showPortfolioGlance] || Defaults[.showWorkoutGlance] { return 200 }
+        if Defaults[.showWorkoutGlance] { return 220 }
+        if Defaults[.showCalendar] || Defaults[.showPortfolioGlance] { return 200 }
         return 160
     }
 
     @ViewBuilder
     private var infoColumn: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if Defaults[.showWeatherGlance] {
-                WeatherGlanceExpandedView()
-            }
-            if Defaults[.showPortfolioGlance] {
-                PortfolioExpandedView()
-            }
-            if Defaults[.showWorkoutGlance] {
-                WorkoutExpandedView()
-            }
-            if Defaults[.showCalendar] {
-                NotchNextEventCard()
-            }
-            if Defaults[.showFocusTimer] {
-                FocusTimerView()
-            }
-            if Defaults[.showSystemStats] {
-                SystemStatsView()
-            }
-            if Defaults[.showCalendar] {
-                CalendarView()
-                    .onHover { isHovering in
-                        vm.isHoveringCalendar = isHovering
+        ZStack {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if Defaults[.showWeatherGlance] {
+                        WeatherGlanceExpandedView()
                     }
-                    .environmentObject(vm)
+                    if Defaults[.showPortfolioGlance] {
+                        PortfolioExpandedView()
+                    }
+                    if Defaults[.showWorkoutGlance] {
+                        WorkoutExpandedView()
+                    }
+                    if Defaults[.showCalendar] {
+                        NotchNextEventCard()
+                    }
+                    if Defaults[.showFocusTimer] {
+                        FocusTimerView()
+                    }
+                    if Defaults[.showSystemStats] {
+                        SystemStatsView()
+                    }
+                    if Defaults[.showCalendar] {
+                        CalendarView()
+                            .environmentObject(vm)
+                    }
+                }
+                .padding(.bottom, 4)
             }
+            .notchScrollExempt()
+
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [Color.black, Color.black.opacity(0)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 14)
+                Spacer(minLength: 0)
+                LinearGradient(
+                    colors: [Color.black.opacity(0), Color.black],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 14)
+            }
+            .allowsHitTesting(false)
+        }
+        .frame(maxHeight: max(170, vm.notchSize.height - 40))
+        .notchScrollRegion { hovering in
+            vm.isGestureSuppressedRegionHovered = hovering
         }
     }
 }

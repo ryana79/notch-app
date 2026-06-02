@@ -12,7 +12,7 @@ pkill -f "mediaremote-adapter.pl.*NotchPro.app" 2>/dev/null || true
 sleep 0.5
 
 echo "Removing stale Debug/Release builds from DerivedData..."
-find "$DERIVED" -path '*/boringNotch-*/*' \( -path '*/Debug/boringNotch.app' -o -path '*/Release/NotchPro.app' -o -path '*/Release/boringNotch.app' \) -type d -maxdepth 8 2>/dev/null | while read -r stale; do
+find "$DERIVED" \( -path '*/NotchPro-*/*' -o -path '*/boringNotch-*/*' \) \( -path '*/Debug/NotchPro.app' -o -path '*/Debug/boringNotch.app' -o -path '*/Release/boringNotch.app' \) -type d -maxdepth 10 2>/dev/null | while read -r stale; do
   echo "  Removing $stale"
   rm -rf "$stale"
 done
@@ -33,11 +33,19 @@ ditto "$APP" /Applications/NotchPro.app
 codesign --force --deep --sign - /Applications/NotchPro.app
 xattr -cr /Applications/NotchPro.app
 
+# DerivedData .app copies make Spotlight/Launchpad show duplicate icons — remove after install
+echo "Removing DerivedData app copy used for install..."
+rm -rf "$APP"
+
 if [[ -x "$LSREGISTER" ]]; then
   echo "Unregistering ALL stale NotchPro/boringNotch copies from Launch Services..."
   find "$DERIVED" \( -path '*/NotchPro.app' -o -path '*/boringNotch.app' \) -type d 2>/dev/null | while read -r stale; do
     "$LSREGISTER" -u "$stale" 2>/dev/null || true
   done
+  # Release DerivedData copy gets re-registered by xcodebuild — unregister so Spotlight only shows /Applications
+  if [[ -n "$APP" && -d "$APP" ]]; then
+    "$LSREGISTER" -u "$APP" 2>/dev/null || true
+  fi
   find "$ROOT" \( -path '*/NotchPro.app' -o -path '*/boringNotch.app' \) -type d 2>/dev/null | while read -r stale; do
     "$LSREGISTER" -u "$stale" 2>/dev/null || true
   done

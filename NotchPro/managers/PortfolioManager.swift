@@ -18,6 +18,7 @@ final class PortfolioManager: ObservableObject {
     @Published private(set) var webullState: BrokerConnectionState = .disconnected
 
     private var refreshTimer: Timer?
+    private var isRefreshScheduled = false
 
     private init() {
         updateConnectionStates()
@@ -33,6 +34,22 @@ final class PortfolioManager: ObservableObject {
             return
         }
         updateConnectionStates()
+    }
+
+    func stop() {
+        pauseRefreshTimer()
+    }
+
+    func pauseRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+        isRefreshScheduled = false
+    }
+
+    func resumeRefreshTimer() {
+        guard Defaults[.showPortfolioGlance], !isRefreshScheduled else { return }
+        updateConnectionStates()
+        isRefreshScheduled = true
         refreshTimer?.invalidate()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -40,11 +57,6 @@ final class PortfolioManager: ObservableObject {
             }
         }
         Task { await refresh() }
-    }
-
-    func stop() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
     }
 
     func updateConnectionStates() {
