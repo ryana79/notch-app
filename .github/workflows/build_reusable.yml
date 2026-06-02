@@ -45,6 +45,9 @@ jobs:
         with:
           ref: ${{ inputs.head_ref }}
 
+      - name: Prepare broker credentials for CI
+        run: cp NotchPro/Resources/BrokerCredentials.example.plist NotchPro/Resources/BrokerCredentials.plist
+
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -project ${{ env.PROJECT_NAME }}.xcodeproj
 
