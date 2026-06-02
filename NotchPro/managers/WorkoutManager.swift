@@ -23,6 +23,10 @@ struct WorkoutSet: Identifiable, Codable, Equatable {
     }
 
     var volume: Double { weight * Double(reps) }
+
+    var displaySummary: String {
+        "\(Int(weight))×\(reps)"
+    }
 }
 
 struct WorkoutSession: Identifiable, Codable, Equatable {
@@ -42,11 +46,6 @@ struct WorkoutSession: Identifiable, Codable, Equatable {
 
     var totalVolume: Double {
         sets.reduce(0) { $0 + $1.volume }
-    }
-
-    var duration: TimeInterval {
-        let end = endedAt ?? .now
-        return max(0, end.timeIntervalSince(startedAt))
     }
 }
 
@@ -87,18 +86,11 @@ final class WorkoutManager: ObservableObject {
     @Published var draftReps: String = "8"
 
     private let storageKey = "notchpro.workout.history.v1"
-    private var tickTimer: Timer?
 
     var isActive: Bool { activeSession?.isActive == true }
 
-    var elapsedDisplay: String {
-        guard let session = activeSession, session.isActive else { return "00:00" }
-        let seconds = Int(session.duration)
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        if h > 0 { return String(format: "%d:%02d:%02d", h, m, s) }
-        return String(format: "%02d:%02d", m, s)
+    var activeSetCount: Int {
+        activeSession?.sets.count ?? 0
     }
 
     var todayVolume: Double {
@@ -116,23 +108,13 @@ final class WorkoutManager: ObservableObject {
         loadHistory()
     }
 
-    func startIfEnabled() {
-        guard Defaults[.showWorkoutGlance] else {
-            stopTicker()
-            return
-        }
-        startTickerIfNeeded()
-    }
+    func startIfEnabled() {}
 
-    func stop() {
-        stopTicker()
-    }
+    func stop() {}
 
     func startWorkout() {
         guard activeSession == nil else { return }
         activeSession = WorkoutSession()
-        startTickerIfNeeded()
-        objectWillChange.send()
     }
 
     func endWorkout() {
@@ -142,10 +124,12 @@ final class WorkoutManager: ObservableObject {
         trimHistory()
         saveHistory()
         activeSession = nil
-        stopTicker()
     }
 
     func addSet(exercise: GymExercise? = nil, weight: Double? = nil, reps: Int? = nil) {
+        if activeSession == nil {
+            startWorkout()
+        }
         guard var session = activeSession, session.isActive else { return }
 
         let parsedWeight = weight ?? Double(draftWeight.replacingOccurrences(of: ",", with: ".")) ?? 0
@@ -172,7 +156,7 @@ final class WorkoutManager: ObservableObject {
     func removeLastSet() {
         guard var session = activeSession, !session.sets.isEmpty else { return }
         session.sets.removeLast()
-        activeSession = session
+        activeSession = session.sets.isEmpty ? nil : session
     }
 
     func setsGroupedByExercise() -> [(name: String, sets: [WorkoutSet])] {
@@ -184,20 +168,6 @@ final class WorkoutManager: ObservableObject {
             grouped[set.exerciseName, default: []].append(set)
         }
         return order.map { ($0, grouped[$0] ?? []) }
-    }
-
-    private func startTickerIfNeeded() {
-        guard tickTimer == nil, isActive else { return }
-        tickTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.objectWillChange.send()
-            }
-        }
-    }
-
-    private func stopTicker() {
-        tickTimer?.invalidate()
-        tickTimer = nil
     }
 
     private func loadHistory() {

@@ -24,9 +24,26 @@ struct NotchWeatherPill: View {
                     }
                 }
             } else if weatherManager.isLoading {
-                ProgressView()
-                    .controlSize(.mini)
-                    .frame(width: 36, height: 20)
+                NotchProPill(tint: .cyan) {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .frame(width: 28, height: 14)
+                }
+            } else {
+                Button {
+                    weatherManager.refreshNow()
+                } label: {
+                    NotchProPill(tint: .gray) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cloud.slash")
+                                .font(.caption2)
+                            Text("Weather")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.white.opacity(0.75))
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -81,6 +98,20 @@ struct WeatherGlanceExpandedView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+        } else {
+            NotchProCard(accent: .gray) {
+                Button {
+                    weatherManager.refreshNow()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Tap to load weather")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

@@ -61,6 +61,21 @@ struct ContentView: View {
         )
     }
 
+    private var closedMusicActive: Bool {
+        vm.notchState == .closed
+            && (musicManager.isPlaying || !musicManager.isPlayerIdle)
+            && coordinator.musicLiveActivityEnabled
+            && !vm.hideOnClosed
+    }
+
+    private var closedStatusRailActive: Bool {
+        vm.notchState == .closed
+            && !closedMusicActive
+            && !(coordinator.expandingView.type == .battery && coordinator.expandingView.show && Defaults[.showPowerStatusNotifications])
+            && !(coordinator.sneakPeek.show && Defaults[.inlineHUD] && coordinator.sneakPeek.type != .music && coordinator.sneakPeek.type != .battery)
+            && !vm.hideOnClosed
+    }
+
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
@@ -68,11 +83,10 @@ struct ContentView: View {
             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
         {
             chinWidth = 640
-        } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music)
-            && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
-            && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
-        {
+        } else if closedMusicActive {
             chinWidth = max(chinWidth, 360)
+        } else if closedStatusRailActive && Defaults[.showWeatherGlance] {
+            chinWidth = max(chinWidth, 300)
         } else if !coordinator.expandingView.show && vm.notchState == .closed
             && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace]
             && !vm.hideOnClosed
@@ -138,12 +152,19 @@ struct ContentView: View {
                                     )
                                     .offset(y: -20)
                                 }
+                            } else if closedMusicActive {
+                                Color.clear
                             } else {
                                 Color.black
                             }
                         }
                     }
-                    .clipShape(currentNotchShape)
+                    .conditionalModifier(!closedMusicActive) { view in
+                        view.clipShape(currentNotchShape)
+                    }
+                    .conditionalModifier(closedMusicActive) { view in
+                        view.background(Color.clear)
+                    }
                     .overlay {
                         if accentGlowEnabled && vm.notchState == .open {
                             let glowColors: [Color] = {
@@ -356,13 +377,16 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
-                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
+                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && closedMusicActive {
                           NotchClosedMusicView(
                             albumArtNamespace: albumArtNamespace,
                             totalWidth: computedChinWidth
                           )
                           .environmentObject(vm)
                           .frame(width: computedChinWidth)
+                      } else if closedStatusRailActive {
+                          NotchStatusRail()
+                              .frame(width: computedChinWidth, height: vm.effectiveClosedNotchHeight, alignment: .center)
                       } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && showNotHumanFace && !performanceMode && !vm.hideOnClosed  {
                           NotchProFaceAnimation()
                        } else if vm.notchState == .open {

@@ -12,6 +12,8 @@ struct NotchStatusRail: View {
     var body: some View {
         HStack(spacing: NotchProDesign.compactSpacing) {
             NotchWeatherPill()
+            NotchPortfolioPill()
+            WorkoutPill()
             NotchCalendarGlance()
             FocusTimerGlance()
             if Defaults[.showBatteryIndicator] {
