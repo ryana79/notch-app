@@ -176,29 +176,10 @@ jobs:
       - name: Build Sparkle generate_appcast
         run: |
           set -euo pipefail
-          SPARKLE_METADATA_PATH="NotchPro.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
           SPARKLE_SRC="$RUNNER_TEMP/Sparkle"
           SPARKLE_DERIVED="$RUNNER_TEMP/sparkle-derived"
-          SPARKLE_REPO_URL="https://github.com/sparkle-project/Sparkle"
-
-          IFS=$'\t' read -r SPARKLE_VERSION SPARKLE_REVISION <<< "$(python3 - "$SPARKLE_METADATA_PATH" <<'PY'
-          import json, sys
-          from pathlib import Path
-          data = json.loads(Path(sys.argv[1]).read_text())
-          sparkle = next(p for p in data.get("pins", []) if p.get("identity") == "sparkle")
-          state = sparkle.get("state", {})
-          print(state.get("version", ""), state.get("revision", ""))
-          PY
-          )"
-
-          SPARKLE_TAG=""
-          for candidate in "$SPARKLE_VERSION" "v$SPARKLE_VERSION"; do
-            if git ls-remote --exit-code --tags "$SPARKLE_REPO_URL" "refs/tags/$candidate" >/dev/null 2>&1; then
-              SPARKLE_TAG="$candidate"
-              break
-            fi
-          done
-          git clone --depth 1 --branch "$SPARKLE_TAG" "$SPARKLE_REPO_URL" "$SPARKLE_SRC"
+          SPARKLE_TAG="2.9.1"
+          git clone --depth 1 --branch "$SPARKLE_TAG" https://github.com/sparkle-project/Sparkle "$SPARKLE_SRC"
           xcodebuild -project "$SPARKLE_SRC/Sparkle.xcodeproj" \
             -scheme generate_appcast \
             -configuration Release \
