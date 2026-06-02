@@ -35,6 +35,9 @@ build/
 NotchPro/Resources/BrokerCredentials.plist
 .broker-secrets.env
 
+# Sparkle signing private key (use GitHub secret PRIVATE_SPARKLE_KEY)
+Configuration/sparkle/ed_private_key.txt
+
 # Temporary files
 *.swp
 *.swo

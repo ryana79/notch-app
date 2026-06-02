@@ -11,9 +11,21 @@ struct WeatherSnapshot: Equatable {
     let temperatureF: Int
     let condition: String
     let iconName: String
+    let city: String
 
     var displayText: String {
-        "\(temperatureF)° · \(condition)"
+        "\(temperatureF)° · \(city)"
+    }
+}
+
+private struct CachedGeoLocation: Codable, Equatable {
+    let lat: Double
+    let lon: Double
+    let city: String
+    let fetchedAt: Date
+
+    var isFresh: Bool {
+        Date().timeIntervalSince(fetchedAt) < 86_400
     }
 }
 
@@ -27,20 +39,42 @@ final class WeatherManager: ObservableObject {
 
     private var refreshTimer: Timer?
     private var lastFetchDate: Date?
+    private var cachedGeo: CachedGeoLocation?
+    private var isRefreshScheduled = false
 
-    private init() {}
+    private let geoCacheKey = "notchpro.weather.geo.v1"
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: geoCacheKey),
+           let cached = try? JSONDecoder().decode(CachedGeoLocation.self, from: data),
+           cached.isFresh {
+            cachedGeo = cached
+        }
+    }
 
     func startIfEnabled() {
         guard Defaults[.showWeatherGlance] else {
             stop()
             return
         }
-        scheduleRefresh()
+        if weather == nil {
+            fetchWeather()
+        }
     }
 
     func stop() {
+        pauseRefreshTimer()
+    }
+
+    func pauseRefreshTimer() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        isRefreshScheduled = false
+    }
+
+    func resumeRefreshTimer() {
+        guard Defaults[.showWeatherGlance], !isRefreshScheduled else { return }
+        scheduleRefresh()
     }
 
     func refreshNow() {
@@ -50,6 +84,7 @@ final class WeatherManager: ObservableObject {
 
     private func scheduleRefresh() {
         refreshTimer?.invalidate()
+        isRefreshScheduled = true
         fetchWeather()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: Defaults[.performanceMode] ? 1800 : 900, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -84,11 +119,11 @@ final class WeatherManager: ObservableObject {
     }
 
     private func fetchFromOpenMeteo() async -> WeatherSnapshot? {
-        guard let coords = await fetchCoordinates() else { return nil }
+        guard let geo = await resolveLocation() else { return nil }
         var components = URLComponents(string: "https://api.open-meteo.com/v1/forecast")!
         components.queryItems = [
-            URLQueryItem(name: "latitude", value: String(coords.lat)),
-            URLQueryItem(name: "longitude", value: String(coords.lon)),
+            URLQueryItem(name: "latitude", value: String(geo.lat)),
+            URLQueryItem(name: "longitude", value: String(geo.lon)),
             URLQueryItem(name: "current", value: "temperature_2m,weather_code"),
             URLQueryItem(name: "temperature_unit", value: "fahrenheit"),
         ]
@@ -107,14 +142,19 @@ final class WeatherManager: ObservableObject {
             return WeatherSnapshot(
                 temperatureF: Int(temp.rounded()),
                 condition: condition(forWeatherCode: code),
-                iconName: icon(forWeatherCode: code)
+                iconName: icon(forWeatherCode: code),
+                city: geo.city
             )
         } catch {
             return nil
         }
     }
 
-    private func fetchCoordinates() async -> (lat: Double, lon: Double)? {
+    private func resolveLocation() async -> CachedGeoLocation? {
+        if let cachedGeo, cachedGeo.isFresh {
+            return cachedGeo
+        }
+
         guard let url = URL(string: "https://ipapi.co/json/") else { return nil }
         do {
             var request = URLRequest(url: url)
@@ -125,9 +165,19 @@ final class WeatherManager: ObservableObject {
                   let lat = json["latitude"] as? Double,
                   let lon = json["longitude"] as? Double
             else { return nil }
-            return (lat, lon)
+
+            let city = (json["city"] as? String)
+                ?? (json["region"] as? String)
+                ?? "Local"
+
+            let geo = CachedGeoLocation(lat: lat, lon: lon, city: city, fetchedAt: .now)
+            cachedGeo = geo
+            if let data = try? JSONEncoder().encode(geo) {
+                UserDefaults.standard.set(data, forKey: geoCacheKey)
+            }
+            return geo
         } catch {
-            return nil
+            return cachedGeo
         }
     }
 
@@ -153,10 +203,14 @@ final class WeatherManager: ObservableObject {
         else { return nil }
 
         let code = (current["weatherCode"] as? [String])?.first ?? "113"
+        let city = ((json["nearest_area"] as? [[String: Any]])?.first?["areaName"] as? [[String: Any]])?.first?["value"] as? String
+            ?? "Local"
+
         return WeatherSnapshot(
             temperatureF: tempF,
             condition: desc,
-            iconName: icon(forWeatherCode: code)
+            iconName: icon(forWeatherCode: code),
+            city: city
         )
     }
 

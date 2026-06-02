@@ -42,6 +42,21 @@ struct ContentView: View {
 
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
+    private let closeSpring = Animation.spring(response: 0.52, dampingFraction: 0.86, blendDuration: 0.15)
+
+    private var hoverCloseDebounceMs: UInt64 {
+        let hasScrollableWidgets = Defaults[.showCalendar]
+            || Defaults[.showWeatherGlance]
+            || Defaults[.showPortfolioGlance]
+            || Defaults[.showWorkoutGlance]
+        return hasScrollableWidgets ? 250 : 100
+    }
+
+    private func setScrollInteractionActive(_ active: Bool) {
+        if vm.isScrollInteractionActive != active {
+            vm.isScrollInteractionActive = active
+        }
+    }
 
     private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
@@ -210,29 +225,38 @@ struct ContentView: View {
                 mainLayout
                     .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
                     .conditionalModifier(true) { view in
-                        let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
-                        let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
-                        
+                        let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.82, blendDuration: 0)
+                        let closeAnimation = closeSpring
+
                         return view
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
+                            .animation(closeSpring, value: computedChinWidth)
                             .animation(.smooth, value: gestureProgress)
                     }
                     .contentShape(Rectangle())
                     .onHover { hovering in
                         handleHover(hovering)
                     }
-                    .onTapGesture {
-                        doOpen()
+                    .conditionalModifier(!closedMusicActive) { view in
+                        view.onTapGesture {
+                            doOpen()
+                        }
                     }
                     .conditionalModifier(Defaults[.enableGestures]) { view in
                         view
-                            .panGesture(direction: .down) { translation, phase in
+                            .panGesture(
+                                direction: .down,
+                                onScrollInteraction: setScrollInteractionActive
+                            ) { translation, phase in
                                 handleDownGesture(translation: translation, phase: phase)
                             }
                     }
                     .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures]) { view in
                         view
-                            .panGesture(direction: .up) { translation, phase in
+                            .panGesture(
+                                direction: .up,
+                                onScrollInteraction: setScrollInteractionActive
+                            ) { translation, phase in
                                 handleUpGesture(translation: translation, phase: phase)
                             }
                     }
@@ -244,7 +268,9 @@ struct ContentView: View {
                                 guard !Task.isCancelled else { return }
                                 await MainActor.run {
                                     if self.vm.notchState == .open && !self.isHovering && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose {
-                                        self.vm.close()
+                                        withAnimation(self.closeSpring) {
+                                            self.vm.close()
+                                        }
                                     }
                                 }
                             }
@@ -256,6 +282,16 @@ struct ContentView: View {
                                 isHovering = false
                             }
                         }
+                        refreshBackgroundServices()
+                    }
+                    .onChange(of: musicManager.isPlaying) { _, _ in
+                        refreshBackgroundServices()
+                    }
+                    .onChange(of: musicManager.isPlayerIdle) { _, _ in
+                        refreshBackgroundServices()
+                    }
+                    .onAppear {
+                        refreshBackgroundServices()
                     }
                     .onChange(of: vm.isBatteryPopoverActive) {
                         if !vm.isBatteryPopoverActive && !isHovering && vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
@@ -265,7 +301,9 @@ struct ContentView: View {
                                 guard !Task.isCancelled else { return }
                                 await MainActor.run {
                                     if !self.vm.isBatteryPopoverActive && !self.isHovering && self.vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
-                                        self.vm.close()
+                                        withAnimation(self.closeSpring) {
+                                            self.vm.close()
+                                        }
                                     }
                                 }
                             }
@@ -326,7 +364,9 @@ struct ContentView: View {
 
                 vm.dropEvent = false
                 if !SharingStateManager.shared.preventNotchClose {
-                    vm.close()
+                    withAnimation(closeSpring) {
+                        vm.close()
+                    }
                 }
             }
         }
@@ -449,10 +489,10 @@ struct ContentView: View {
                     }
                 }
                 .transition(
-                    .scale(scale: 0.8, anchor: .top)
+                    .scale(scale: 0.94, anchor: .top)
                     .combined(with: .opacity)
-                    .animation(.smooth(duration: 0.35))
                 )
+                .animation(closeSpring, value: vm.notchState)
                 .zIndex(1)
                 .allowsHitTesting(vm.notchState == .open)
                 .opacity(gestureProgress != 0 ? 1.0 - min(abs(gestureProgress) * 0.1, 0.3) : 1.0)
@@ -557,7 +597,8 @@ struct ContentView: View {
                         .matchedGeometryEffect(id: "spectrum", in: albumArtNamespace)
                         .mask {
                             AudioSpectrumView(
-                                isPlaying: .constant(musicManager.isPlaying && !performanceMode)
+                                isPlaying: .constant(musicManager.isPlaying && !performanceMode),
+                                isVisible: !performanceMode && (vm.notchState == .closed && !closedMusicActive && !vm.hideOnClosed)
                             )
                                 .frame(width: 16, height: 12)
                         }
@@ -640,7 +681,7 @@ struct ContentView: View {
             }
         } else {
             hoverTask = Task {
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(hoverCloseDebounceMs))
                 guard !Task.isCancelled else { return }
                 
                 await MainActor.run {
@@ -648,8 +689,13 @@ struct ContentView: View {
                         self.isHovering = false
                     }
                     
-                    if self.vm.notchState == .open && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose {
-                        self.vm.close()
+                    if self.vm.notchState == .open,
+                       !self.vm.isBatteryPopoverActive,
+                       !self.vm.isScrollInteractionActive,
+                       !SharingStateManager.shared.preventNotchClose {
+                        withAnimation(self.closeSpring) {
+                            self.vm.close()
+                        }
                     }
                 }
             }
@@ -681,8 +727,17 @@ struct ContentView: View {
         }
     }
 
+    private func refreshBackgroundServices() {
+        NotchVisibilityCoordinator.update(
+            notchOpen: vm.notchState == .open,
+            statusRailVisible: vm.notchState == .closed && closedStatusRailActive
+        )
+    }
+
     private func handleUpGesture(translation: CGFloat, phase: NSEvent.Phase) {
-        guard vm.notchState == .open && !vm.isHoveringCalendar else { return }
+        guard vm.notchState == .open,
+              !vm.isScrollInteractionActive,
+              !vm.isGestureSuppressedRegionHovered else { return }
 
         withAnimation(animationSpring) {
             gestureProgress = (translation / Defaults[.gestureSensitivity]) * -20
@@ -698,9 +753,11 @@ struct ContentView: View {
             withAnimation(animationSpring) {
                 isHovering = false
             }
-            if !SharingStateManager.shared.preventNotchClose { 
+            if !SharingStateManager.shared.preventNotchClose {
                 gestureProgress = .zero
-                vm.close()
+                withAnimation(closeSpring) {
+                    vm.close()
+                }
             }
 
             if Defaults[.enableHaptics] {

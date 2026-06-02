@@ -37,8 +37,8 @@ struct NotchClosedMusicView: View {
         max(24, min(barHeight - 6, 30))
     }
 
-    private var notchGap: CGFloat {
-        max(32, vm.closedNotchSize.width - 32)
+    private var titleWidth: CGFloat {
+        min(88, max(56, totalWidth * 0.26))
     }
 
     private var progress: Double {
@@ -60,30 +60,38 @@ struct NotchClosedMusicView: View {
             capsuleBackground
                 .frame(width: totalWidth, height: barHeight)
 
-            HStack(spacing: 10) {
-                albumArtCluster
+            HStack(spacing: 8) {
+                Group {
+                    albumArtCluster
 
-                VStack(alignment: .leading, spacing: 1) {
-                    MarqueeText(
-                        .constant(musicManager.songTitle),
-                        font: .caption.weight(.semibold),
-                        nsFont: .caption1,
-                        textColor: .white,
-                        minDuration: 0.4,
-                        frameWidth: 96
-                    )
-                    MarqueeText(
-                        .constant(musicManager.artistName),
-                        font: .caption2,
-                        nsFont: .caption2,
-                        textColor: accentColor.opacity(0.9),
-                        minDuration: 0.4,
-                        frameWidth: 96
-                    )
+                    VStack(alignment: .leading, spacing: 1) {
+                        MarqueeText(
+                            .constant(musicManager.songTitle),
+                            font: .caption.weight(.semibold),
+                            nsFont: .caption1,
+                            textColor: .white,
+                            minDuration: 0.4,
+                            frameWidth: titleWidth
+                        )
+                        MarqueeText(
+                            .constant(musicManager.artistName),
+                            font: .caption2,
+                            nsFont: .caption2,
+                            textColor: accentColor.opacity(0.9),
+                            minDuration: 0.4,
+                            frameWidth: titleWidth
+                        )
+                    }
+                    .frame(width: titleWidth, alignment: .leading)
                 }
-                .frame(width: 96, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+                        vm.open()
+                    }
+                }
 
-                Spacer(minLength: notchGap)
+                Spacer(minLength: 0)
 
                 if useMusicVisualizer && musicManager.isPlaying {
                     spectrumBars
@@ -96,8 +104,9 @@ struct NotchClosedMusicView: View {
 
                 playbackToggle
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .frame(width: totalWidth, height: barHeight)
+            .clipped()
 
             progressBar
         }
@@ -112,7 +121,7 @@ struct NotchClosedMusicView: View {
         } label: {
             Group {
                 if musicManager.isPlaying {
-                    HStack(spacing: 2) {
+                    HStack(spacing: 2.5) {
                         Capsule().fill(.white.opacity(0.9)).frame(width: 2.5, height: 10)
                         Capsule().fill(.white.opacity(0.9)).frame(width: 2.5, height: 10)
                     }
@@ -122,10 +131,11 @@ struct NotchClosedMusicView: View {
                         .foregroundStyle(.white.opacity(0.9))
                 }
             }
-            .frame(width: 16, height: 16)
+            .frame(width: 22, height: 22)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .zIndex(2)
     }
 
     private var capsuleBackground: some View {
@@ -212,11 +222,14 @@ struct NotchClosedMusicView: View {
     private var spectrumBars: some View {
         Rectangle()
             .fill(coloredSpectrogram ? accentColor.gradient : Color.white.gradient)
-            .frame(width: 26, height: 14)
+            .frame(width: 22, height: 14)
             .matchedGeometryEffect(id: "spectrum", in: albumArtNamespace)
             .mask {
-                AudioSpectrumView(isPlaying: .constant(musicManager.isPlaying))
-                    .frame(width: 20, height: 14)
+                AudioSpectrumView(
+                    isPlaying: .constant(musicManager.isPlaying),
+                    isVisible: useMusicVisualizer && musicManager.isPlaying
+                )
+                    .frame(width: 18, height: 14)
             }
     }
 

@@ -70,7 +70,7 @@ struct SettingsView: View {
                         // Fallback with a default controller
                         About(
                             updaterController: SPUStandardUpdaterController(
-                                startingUpdater: false, updaterDelegate: nil,
+                                startingUpdater: true, updaterDelegate: nil,
                                 userDriverDelegate: nil))
                     }
                 default:
@@ -420,7 +420,7 @@ struct GeneralSettings: View {
             }
         } footer: {
             Text(
-                "Two-finger swipe up on notch to close, two-finger swipe down on notch to open when **Open notch on hover** option is disabled"
+                "Swipe up on the collapse handle or at the top of a scroll list to close. Swipe down on the notch to open when **Open notch on hover** is disabled. Scrolling through widgets and reminders won't collapse the notch."
             )
             .multilineTextAlignment(.trailing)
             .foregroundStyle(.secondary)

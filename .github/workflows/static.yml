@@ -1,24 +1,24 @@
-# Simple workflow for deploying static content to GitHub Pages
+# Publishes updater/appcast.xml to GitHub Pages for Sparkle auto-updates.
 name: Deploy static content to Pages
 
 on:
-  # Pages is optional — run manually after enabling GitHub Pages on the repo.
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "updater/**"
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
     environment:
       name: github-pages
@@ -32,8 +32,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          # Upload entire repository
-          path: 'updater/'
+          path: updater/
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

@@ -29,7 +29,8 @@ class NotchProViewModel: NSObject, ObservableObject {
     @Published var hideOnClosed: Bool = true
 
     @Published var edgeAutoOpenActive: Bool = false
-    @Published var isHoveringCalendar: Bool = false
+    @Published var isGestureSuppressedRegionHovered: Bool = false
+    @Published var isScrollInteractionActive: Bool = false
     @Published var isBatteryPopoverActive: Bool = false
 
     @Published var screenUUID: String?

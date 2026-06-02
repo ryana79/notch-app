@@ -142,6 +142,7 @@
 		B1F0A0022E60000100000001 /* BrightnessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F0A0012E60000100000001 /* BrightnessManager.swift */; };
 		B1F747F92EC7E94000F841DB /* LottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F747F82EC7E94000F841DB /* LottieView.swift */; };
 		B1FEB4992C7686630066EBBC /* PanGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FEB4982C7686630066EBBC /* PanGesture.swift */; };
+		B1SCRL012E80000100000002 /* NotchScrollExempt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1SCRL012E80000100000001 /* NotchScrollExempt.swift */; };
 		F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */; };
 		B1PERF012E70000100000001 /* PerformanceModeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PERF012E70000100000001 /* PerformanceModeManager.swift */; };
 		B1CLIP012E70000100000002 /* ClipboardHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CLIP012E70000100000002 /* ClipboardHistoryManager.swift */; };
@@ -169,6 +170,7 @@
 		B1PORT012E70000100000011 /* BrokerCredentials.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000011 /* BrokerCredentials.example.plist */; };
 		B1PORT012E70000100000012 /* BrokerCredentials.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000012 /* BrokerCredentials.plist */; };
 		B1WRKT012E70000100000001 /* WorkoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1WRKT012E70000100000001 /* WorkoutManager.swift */; };
+		B1NVIS012E70000100000001 /* NotchVisibilityCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1NVIS012E70000100000001 /* NotchVisibilityCoordinator.swift */; };
 		B1WRKT012E70000100000002 /* WorkoutGlanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1WRKT012E70000100000002 /* WorkoutGlanceView.swift */; };
 /* End PBXBuildFile section */
 
@@ -335,6 +337,7 @@
 		B1F0A0012E60000100000001 /* BrightnessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightnessManager.swift; sourceTree = "<group>"; };
 		B1F747F82EC7E94000F841DB /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		B1FEB4982C7686630066EBBC /* PanGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanGesture.swift; sourceTree = "<group>"; };
+		B1SCRL012E80000100000001 /* NotchScrollExempt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchScrollExempt.swift; sourceTree = "<group>"; };
 		F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryActivityManager.swift; sourceTree = "<group>"; };
 		A1PERF012E70000100000001 /* PerformanceModeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceModeManager.swift; sourceTree = "<group>"; };
 		A1CLIP012E70000100000002 /* ClipboardHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryManager.swift; sourceTree = "<group>"; };
@@ -363,6 +366,7 @@
 		A1PORT012E70000100000011 /* BrokerCredentials.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BrokerCredentials.example.plist; sourceTree = "<group>"; };
 		A1PORT012E70000100000012 /* BrokerCredentials.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BrokerCredentials.plist; sourceTree = "<group>"; };
 		A1WRKT012E70000100000001 /* WorkoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutManager.swift; sourceTree = "<group>"; };
+		A1NVIS012E70000100000001 /* NotchVisibilityCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchVisibilityCoordinator.swift; sourceTree = "<group>"; };
 		A1WRKT012E70000100000002 /* WorkoutGlanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutGlanceView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -634,6 +638,7 @@
 				A1WEAT012E70000100000003 /* WeatherManager.swift */,
 				A1PORT012E70000100000005 /* PortfolioManager.swift */,
 				A1WRKT012E70000100000001 /* WorkoutManager.swift */,
+				A1NVIS012E70000100000001 /* NotchVisibilityCoordinator.swift */,
 				11D58EA12E760AE100FA8377 /* ImageService.swift */,
 				F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */,
 				112FB7342CCF16F70015238C /* NotchSpaceManager.swift */,
@@ -846,6 +851,7 @@
 				14E9FEAD2C7325770062E83F /* Button+Bouncing.swift */,
 				B10348D82C74E56000475897 /* ConditionalModifier.swift */,
 				B1FEB4982C7686630066EBBC /* PanGesture.swift */,
+				B1SCRL012E80000100000001 /* NotchScrollExempt.swift */,
 				14FC6E4F2C7DED5600C7BEA5 /* DataTypes+Extensions.swift */,
 				B1C448952C9712C4001F0858 /* ActionBar.swift */,
 			);
@@ -1184,6 +1190,7 @@
 				B1PORT012E70000100000007 /* BrokerSettingsView.swift in Sources */,
 				B1PORT012E70000100000009 /* BrokerConfig.swift in Sources */,
 				B1WRKT012E70000100000001 /* WorkoutManager.swift in Sources */,
+				B1NVIS012E70000100000001 /* NotchVisibilityCoordinator.swift in Sources */,
 				B1WRKT012E70000100000002 /* WorkoutGlanceView.swift in Sources */,
 				B10348D92C74E56000475897 /* ConditionalModifier.swift in Sources */,
 				118D1FD12E98FF5F00A2FF63 /* SharingStateManager.swift in Sources */,
@@ -1193,6 +1200,7 @@
 				11F748692EC9AC9600F841DB /* XPCHelperClient.swift in Sources */,
 				118EBE2D2E97165600D54B5A /* Bookmark.swift in Sources */,
 				B1FEB4992C7686630066EBBC /* PanGesture.swift in Sources */,
+				B1SCRL012E80000100000002 /* NotchScrollExempt.swift in Sources */,
 				11F748842ECB27DC00F841DB /* MusicSlotConfigurationView.swift in Sources */,
 				9A0887352C7AFF8E00C160EA /* TabSelectionView.swift in Sources */,
 				112FB7352CCF16F70015238C /* NotchSpaceManager.swift in Sources */,
@@ -1433,6 +1441,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "NotchPro uses the camera for the optional mirror feature";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Ryan Amir";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "NotchPro displays your reminders in the calendar view";
+				INFOPLIST_KEY_SUFeedURL = "https://ryana79.github.io/notch-app/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "oQYmVg2wZkaXZJuqCjPFSh7roOot3IqkayEJ0fcTlHg=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -1486,6 +1496,8 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "NotchPro uses the camera for the optional mirror feature";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Ryan Amir";
 				INFOPLIST_KEY_NSRemindersUsageDescription = "NotchPro displays your reminders in the calendar view";
+				INFOPLIST_KEY_SUFeedURL = "https://ryana79.github.io/notch-app/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "oQYmVg2wZkaXZJuqCjPFSh7roOot3IqkayEJ0fcTlHg=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

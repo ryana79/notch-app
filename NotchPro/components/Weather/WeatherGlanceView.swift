@@ -21,6 +21,10 @@ struct NotchWeatherPill: View {
                         Text("\(weather.temperatureF)°")
                             .font(.caption.weight(.bold).monospacedDigit())
                             .foregroundStyle(.white.opacity(0.9))
+                        Text(weather.city)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.65))
+                            .lineLimit(1)
                     }
                 }
             } else if weatherManager.isLoading {
@@ -61,7 +65,7 @@ struct WeatherGlanceExpandedView: View {
     var body: some View {
         if let weather = weatherManager.weather {
             NotchProCard(accent: .cyan, accentOpacity: 0.22) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ZStack {
                         Circle()
                             .fill(
@@ -71,17 +75,21 @@ struct WeatherGlanceExpandedView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .frame(width: 44, height: 44)
+                            .frame(width: 40, height: 40)
                         Image(systemName: weather.iconName)
-                            .font(.title2)
+                            .font(.title3)
                             .symbolRenderingMode(.multicolor)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(weather.city)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
                         Text("\(weather.temperatureF)°")
-                            .font(.title2.weight(.bold).monospacedDigit())
+                            .font(.title3.weight(.bold).monospacedDigit())
                             .foregroundStyle(.white)
                         Text(weather.condition)
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }

@@ -43,6 +43,10 @@ final class ClipboardHistoryManager: ObservableObject {
     private var pollTimer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
     private var lastCopiedContent: String?
+    private var becomeActiveObserver: NSObjectProtocol?
+    private var lastNotchOpen = false
+
+    var lastNotchOpenState: Bool { lastNotchOpen }
 
     private init() {
         loadEntries()
@@ -51,25 +55,57 @@ final class ClipboardHistoryManager: ObservableObject {
 
     func startMonitoring() {
         guard Defaults[.enableClipboardHistory] else { return }
-        pollTimer?.invalidate()
+        stopMonitoring()
         lastChangeCount = NSPasteboard.general.changeCount
-        let interval = Defaults[.performanceMode] ? 1.5 : 0.5
-        pollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+
+        becomeActiveObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
             Task { @MainActor in
                 self?.checkPasteboard()
             }
         }
+
+        updatePolling(notchOpen: false)
     }
 
     func stopMonitoring() {
         pollTimer?.invalidate()
         pollTimer = nil
+        if let becomeActiveObserver {
+            NotificationCenter.default.removeObserver(becomeActiveObserver)
+            self.becomeActiveObserver = nil
+        }
     }
 
     func refreshMonitoring() {
         stopMonitoring()
         if Defaults[.enableClipboardHistory] {
             startMonitoring()
+        }
+    }
+
+    func updatePolling(notchOpen: Bool) {
+        lastNotchOpen = notchOpen
+        guard Defaults[.enableClipboardHistory] else {
+            pollTimer?.invalidate()
+            pollTimer = nil
+            return
+        }
+
+        let shouldPoll = notchOpen || isPanelVisible
+        pollTimer?.invalidate()
+        pollTimer = nil
+
+        guard shouldPoll else { return }
+
+        let interval = Defaults[.performanceMode] ? 1.5 : 0.75
+        pollTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkPasteboard()
+            }
         }
     }
 
@@ -145,6 +181,7 @@ final class ClipboardHistoryManager: ObservableObject {
         } else {
             ClipboardHistoryPanelController.shared.closeWindow()
         }
+        updatePolling(notchOpen: lastNotchOpen)
     }
 
     private var storageURL: URL {
@@ -192,6 +229,7 @@ final class ClipboardHistoryPanelController {
         window?.orderOut(nil)
         Task { @MainActor in
             ClipboardHistoryManager.shared.isPanelVisible = false
+            ClipboardHistoryManager.shared.updatePolling(notchOpen: ClipboardHistoryManager.shared.lastNotchOpenState)
         }
     }
 }

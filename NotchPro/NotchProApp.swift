@@ -21,9 +21,8 @@ struct NotchProApp: App {
     let updaterController: SPUStandardUpdaterController
 
     init() {
-        // NotchPro: no auto-updates from upstream — you control updates via your own repo
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
+            startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
         SettingsWindowController.shared.setUpdaterController(updaterController)
     }
