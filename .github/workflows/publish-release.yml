@@ -166,12 +166,13 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "v${VERSION}" >/dev/null 2>&1; then
-            echo "::error::Release v${VERSION} already exists"
-            exit 1
+            echo "Release v${VERSION} already exists; refreshing DMG asset"
+            gh release upload "v${VERSION}" "Release/${{ env.PROJECT_NAME }}.dmg" --clobber
+          else
+            gh release create "v${VERSION}" "Release/${{ env.PROJECT_NAME }}.dmg" \
+              --title "NotchPro v${VERSION}" \
+              --notes "Download NotchPro.dmg and drag to Applications. Updates are delivered automatically via Sparkle."
           fi
-          gh release create "v${VERSION}" "Release/${{ env.PROJECT_NAME }}.dmg" \
-            --title "NotchPro v${VERSION}" \
-            --notes "Download NotchPro.dmg and drag to Applications. Updates are delivered automatically via Sparkle."
 
       - name: Build Sparkle generate_appcast
         run: |
