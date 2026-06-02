@@ -29,7 +29,7 @@
 		<dict/>
 	</array>
 	<key>SUFeedURL</key>
-	<string>https://ryana79.github.io/notch-app/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/ryana79/notch-app/main/updater/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>oQYmVg2wZkaXZJuqCjPFSh7roOot3IqkayEJ0fcTlHg=</string>
 </dict>

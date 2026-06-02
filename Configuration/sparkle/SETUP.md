@@ -25,7 +25,7 @@ generate_keys --account notchpro -x Configuration/sparkle/ed_private_key.txt
 
 The `Deploy static content to Pages` workflow publishes `updater/appcast.xml` to:
 
-`https://ryana79.github.io/notch-app/appcast.xml`
+`https://raw.githubusercontent.com/ryana79/notch-app/main/updater/appcast.xml`
 
 ### 3. Optional signing secrets (smoother installs)
 
