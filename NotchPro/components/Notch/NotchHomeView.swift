@@ -25,28 +25,31 @@ struct MusicPlayerView: View {
     }
 
     var body: some View {
-        HStack {
-            AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace).padding(.all, 5)
-            MusicControlsView().drawingGroup().compositingGroup()
+        HStack(alignment: .center, spacing: 14) {
+            AlbumArtView(vm: vm, albumArtNamespace: albumArtNamespace)
+            MusicControlsView()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .drawingGroup()
+                .compositingGroup()
         }
-        .padding(8)
+        .padding(10)
         .background {
             if musicManager.isPlaying && !Defaults[.performanceMode] {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                accent.opacity(0.22),
-                                Color.black.opacity(0.35),
-                                accent.opacity(0.12),
+                                accent.opacity(0.18),
+                                Color.white.opacity(0.04),
+                                accent.opacity(0.08),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(accent.opacity(0.25), lineWidth: 0.5)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(accent.opacity(0.22), lineWidth: 0.5)
                     }
             }
         }
@@ -127,7 +130,11 @@ struct AlbumArtView: View {
     private var albumArtImage: some View {
         Image(nsImage: musicManager.albumArt)
             .resizable()
-            .aspectRatio(1, contentMode: .fit)
+            .aspectRatio(1, contentMode: .fill)
+            .frame(
+                width: MusicPlayerImageSizes.size.opened.width,
+                height: MusicPlayerImageSizes.size.opened.height
+            )
             .matchedGeometryEffect(id: "albumArt", in: albumArtNamespace)
             .clipped()
             .clipShape(
@@ -163,7 +170,7 @@ struct MusicControlsView: View {
     @Default(.musicControlSlotLimit) private var slotLimit
 
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 10) {
             songInfoAndSlider
             slotToolbar
         }
@@ -172,30 +179,30 @@ struct MusicControlsView: View {
 
     private var songInfoAndSlider: some View {
         GeometryReader { geo in
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
                 songInfo(width: geo.size.width)
                 musicSlider
             }
         }
-        .padding(.top, 10)
-        .padding(.leading, 5)
+        .frame(minHeight: 148)
     }
 
     private func songInfo(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 3) {
             MarqueeText(
-                $musicManager.songTitle, font: .headline, nsFont: .headline, textColor: .white,
-                frameWidth: width)
-            MarqueeText(
-                $musicManager.artistName,
-                font: .headline,
+                $musicManager.songTitle,
+                font: .system(size: 17, weight: .semibold),
                 nsFont: .headline,
-                textColor: Defaults[.playerColorTinting]
-                    ? Color(nsColor: musicManager.avgColor)
-                        .ensureMinimumBrightness(factor: 0.6) : .gray,
+                textColor: .white,
                 frameWidth: width
             )
-            .fontWeight(.medium)
+            MarqueeText(
+                $musicManager.artistName,
+                font: .system(size: 14, weight: .regular),
+                nsFont: .subheadline,
+                textColor: Color.white.opacity(0.52),
+                frameWidth: width
+            )
             if Defaults[.enableLyrics] {
                 TimelineView(.animation(minimumInterval: lyricsTimelineInterval)) { timeline in
                     let currentElapsed: Double = {
@@ -248,14 +255,14 @@ struct MusicControlsView: View {
             ) { newValue in
                 MusicManager.shared.seek(to: newValue)
             }
-            .padding(.top, 5)
-            .frame(height: 36)
+            .padding(.top, 2)
+            .frame(height: 28)
         }
     }
 
     private var slotToolbar: some View {
         let slots = activeSlots
-        return HStack(spacing: 6) {
+        return HStack(spacing: 8) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 slotView(for: slot)
                     .frame(alignment: .center)
@@ -562,14 +569,14 @@ struct NotchHomeView: View {
 
             VStack(spacing: 0) {
                 LinearGradient(
-                    colors: [Color.black, Color.black.opacity(0)],
+                    colors: [Color.black.opacity(0.45), Color.clear],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .frame(height: 14)
                 Spacer(minLength: 0)
                 LinearGradient(
-                    colors: [Color.black.opacity(0), Color.black],
+                    colors: [Color.clear, Color.black.opacity(0.45)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -610,19 +617,16 @@ struct MusicSliderView: View {
                 lastDragged: $lastDragged,
                 onValueChange: onValueChange
             )
-            .frame(height: 10, alignment: .center)
+            .frame(height: 6, alignment: .center)
+            .padding(.horizontal, 2)
 
-            HStack {
+            HStack(spacing: 8) {
                 Text(timeString(from: sliderValue))
-                Spacer()
+                Spacer(minLength: 0)
                 Text(timeString(from: duration))
             }
-            .fontWeight(.medium)
-            .foregroundColor(
-                Defaults[.playerColorTinting]
-                    ? Color(nsColor: color).ensureMinimumBrightness(factor: 0.6) : .gray
-            )
-            .font(.caption)
+            .font(.system(size: 10, weight: .medium).monospacedDigit())
+            .foregroundColor(Color.white.opacity(0.45))
         }
         .onChange(of: currentDate) {
            guard !dragging, timestampDate.timeIntervalSince(lastDragged) > -1 else { return }
@@ -656,7 +660,7 @@ struct CustomSlider: View {
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
-            let height = CGFloat(dragging ? 9 : 5)
+            let height = CGFloat(dragging ? 5 : 3)
             let rangeSpan = range.upperBound - range.lowerBound
 
             let progress = rangeSpan == .zero ? 0 : (value - range.lowerBound) / rangeSpan
@@ -672,7 +676,7 @@ struct CustomSlider: View {
                     .frame(width: filledTrackWidth, height: height)
             }
             .cornerRadius(height / 2)
-            .frame(height: 10)
+            .frame(height: 8)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)

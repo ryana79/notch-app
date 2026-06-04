@@ -281,6 +281,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NotchProTouchBarController.configureApp()
 
         if !Defaults[.didApplyNotchProUIV2] {
             Defaults[.layoutPreset] = .balanced
@@ -447,6 +448,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.onKeyDown(for: .clipboardHistoryPanel) {
             Task { @MainActor in
                 ClipboardHistoryManager.shared.togglePanel()
+            }
+        }
+
+        KeyboardShortcuts.onKeyDown(for: .quickScreenshot) {
+            Task { @MainActor in
+                ScreenshotCaptureManager.shared.captureInteractive()
             }
         }
 

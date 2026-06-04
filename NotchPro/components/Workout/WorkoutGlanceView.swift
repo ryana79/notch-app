@@ -55,6 +55,7 @@ struct WorkoutPill: View {
 struct WorkoutExpandedView: View {
     @ObservedObject private var workout = WorkoutManager.shared
     @State private var showHistory = false
+    @State private var isAddSetHovering = false
 
     var body: some View {
         NotchProCard(accent: .orange, accentOpacity: 0.28) {
@@ -236,11 +237,21 @@ struct WorkoutExpandedView: View {
                     Image(systemName: "plus")
                         .font(.caption2.weight(.bold))
                         .frame(width: 26, height: 26)
-                        .background(Circle().fill(Color.orange.opacity(0.85)))
+                        .background(
+                            Circle()
+                                .fill(Color.orange.opacity(isAddSetHovering ? 1 : 0.85))
+                                .shadow(
+                                    color: .orange.opacity(isAddSetHovering ? 0.55 : 0),
+                                    radius: isAddSetHovering ? 8 : 0
+                                )
+                        )
                         .foregroundStyle(.white)
+                        .scaleEffect(isAddSetHovering ? 1.08 : 1)
                 }
                 .buttonStyle(.plain)
                 .disabled(workout.draftWeight <= 0)
+                .animation(.smooth(duration: 0.2), value: isAddSetHovering)
+                .onHover { isAddSetHovering = $0 }
             }
         }
     }

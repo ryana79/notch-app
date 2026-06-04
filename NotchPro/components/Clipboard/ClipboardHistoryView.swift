@@ -3,6 +3,7 @@
 //  notchpro
 //
 
+import AppKit
 import SwiftUI
 
 struct ClipboardHistoryView: View {
@@ -39,9 +40,19 @@ struct ClipboardHistoryView: View {
                             manager.copyToPasteboard(entry)
                         } label: {
                             HStack(alignment: .top, spacing: 10) {
-                                Image(systemName: entry.icon)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 18)
+                                if entry.contentType == .image,
+                                   let url = ClipboardHistoryManager.shared.screenshotURL(for: entry),
+                                   let image = NSImage(contentsOf: url) {
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 44, height: 44)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                } else {
+                                    Image(systemName: entry.icon)
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 18)
+                                }
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(entry.preview)
                                         .font(.body)

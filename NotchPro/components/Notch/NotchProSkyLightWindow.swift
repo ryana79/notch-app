@@ -111,4 +111,9 @@ class NotchProSkyLightWindow: NSPanel {
     
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+
+    override func makeTouchBar() -> NSTouchBar? {
+        guard Defaults[.enableTouchBar] else { return nil }
+        return NotchProTouchBarController.shared.makeTouchBar()
+    }
 }

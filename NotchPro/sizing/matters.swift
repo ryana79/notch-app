@@ -40,7 +40,7 @@ let openNotchSize: CGSize = .init(width: 640, height: 265)
         height = max(height, 255)
     }
 
-    return .init(width: 640, height: height)
+    return .init(width: 680, height: height)
 }
 
 @MainActor func getWindowSize() -> CGSize {
@@ -50,8 +50,17 @@ let openNotchSize: CGSize = .init(width: 640, height: 265)
 let cornerRadiusInsets: (opened: (top: CGFloat, bottom: CGFloat), closed: (top: CGFloat, bottom: CGFloat)) = (opened: (top: 22, bottom: 28), closed: (top: 8, bottom: 16))
 
 enum MusicPlayerImageSizes {
-    static let cornerRadiusInset: (opened: CGFloat, closed: CGFloat) = (opened: 13.0, closed: 4.0)
-    static let size = (opened: CGSize(width: 90, height: 90), closed: CGSize(width: 20, height: 20))
+    static let cornerRadiusInset: (opened: CGFloat, closed: CGFloat) = (
+        opened: NotchProDesign.albumArtCornerRadius,
+        closed: 4.0
+    )
+    static let size = (
+        opened: CGSize(
+            width: NotchProDesign.albumArtSize,
+            height: NotchProDesign.albumArtSize
+        ),
+        closed: CGSize(width: 20, height: 20)
+    )
 }
 
 @MainActor func getScreenFrame(_ screenUUID: String? = nil) -> CGRect? {
