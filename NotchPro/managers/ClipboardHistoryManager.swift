@@ -17,18 +17,25 @@ struct ClipboardEntry: Identifiable, Codable, Hashable {
     enum ClipboardContentType: String, Codable {
         case text
         case url
+        case image
     }
 
     var preview: String {
-        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count <= 80 { return trimmed }
-        return String(trimmed.prefix(77)) + "..."
+        switch contentType {
+        case .image:
+            return "Screenshot"
+        case .text, .url:
+            let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.count <= 80 { return trimmed }
+            return String(trimmed.prefix(77)) + "..."
+        }
     }
 
     var icon: String {
         switch contentType {
         case .text: return "doc.on.doc"
         case .url: return "link"
+        case .image: return "camera.viewfinder"
         }
     }
 }
@@ -157,11 +164,45 @@ final class ClipboardHistoryManager: ObservableObject {
         saveEntries()
     }
 
+    func screenshotURL(for entry: ClipboardEntry) -> URL? {
+        ScreenshotCaptureManager.shared.imageURL(for: entry)
+    }
+
+    func addScreenshotEntry(fileName: String) {
+        guard !fileName.isEmpty else { return }
+        if entries.first?.content == fileName, entries.first?.contentType == .image { return }
+
+        let entry = ClipboardEntry(
+            id: UUID(),
+            content: fileName,
+            timestamp: Date(),
+            contentType: .image
+        )
+
+        entries.insert(entry, at: 0)
+        let limit = Defaults[.clipboardHistoryLimit]
+        if entries.count > limit {
+            entries = Array(entries.prefix(limit))
+        }
+        saveEntries()
+        lastCopiedContent = nil
+        lastChangeCount = NSPasteboard.general.changeCount
+    }
+
     func copyToPasteboard(_ entry: ClipboardEntry) {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(entry.content, forType: .string)
+        switch entry.contentType {
+        case .image:
+            guard let url = ScreenshotCaptureManager.shared.imageURL(for: entry),
+                  let image = NSImage(contentsOf: url)
+            else { return }
+            NSPasteboard.general.writeObjects([image])
+            lastCopiedContent = nil
+        case .text, .url:
+            NSPasteboard.general.setString(entry.content, forType: .string)
+            lastCopiedContent = entry.content
+        }
         lastChangeCount = NSPasteboard.general.changeCount
-        lastCopiedContent = entry.content
     }
 
     func removeEntry(_ entry: ClipboardEntry) {

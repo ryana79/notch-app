@@ -9,11 +9,13 @@ enum NotchProDesign {
     static let cardRadius: CGFloat = 14
     static let pillRadius: CGFloat = 999
     static let compactSpacing: CGFloat = 6
+    static let albumArtSize: CGFloat = 145
+    static let albumArtCornerRadius: CGFloat = 18
 
     /// Lightweight card — solid fill, no blur (battery-friendly).
-    static func cardBackground(opacity: Double = 0.08) -> some View {
+    static func cardBackground(opacity: Double = 0.08, hoverBoost: Double = 0) -> some View {
         RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-            .fill(Color.white.opacity(opacity))
+            .fill(Color.white.opacity(opacity + hoverBoost))
     }
 
     static func cardBorder(accent: Color = .white, opacity: Double = 0.12) -> some View {
@@ -22,10 +24,54 @@ enum NotchProDesign {
     }
 }
 
+/// Frosted glass stack for the expanded notch shell.
+struct NotchGlassPanelBackground: View {
+    var cornerRadius: CGFloat
+    var accent: Color?
+    var showAmbientGlow: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(.thinMaterial)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.14),
+                            Color.white.opacity(0.04),
+                            Color.black.opacity(0.28),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.22),
+                            Color.clear,
+                        ],
+                        startPoint: .top,
+                        endPoint: UnitPoint(x: 0.5, y: 0.42)
+                    )
+                )
+            if showAmbientGlow, let accent {
+                NotchAmbientGlow(color: accent, isActive: true)
+                    .offset(y: -24)
+                    .opacity(0.55)
+            }
+        }
+    }
+}
+
 struct NotchProCard<Content: View>: View {
     var accent: Color = .white
     var accentOpacity: Double = 0.12
+    var hoverEnabled: Bool = true
     @ViewBuilder var content: () -> Content
+    @State private var isHovering = false
 
     var body: some View {
         content()
@@ -33,11 +79,23 @@ struct NotchProCard<Content: View>: View {
             .padding(.vertical, 10)
             .background {
                 ZStack {
-                    NotchProDesign.cardBackground()
-                    NotchProDesign.cardBorder(accent: accent, opacity: accentOpacity)
+                    NotchProDesign.cardBackground(
+                        opacity: 0.08,
+                        hoverBoost: isHovering ? 0.06 : 0
+                    )
+                    NotchProDesign.cardBorder(
+                        accent: accent,
+                        opacity: isHovering ? accentOpacity + 0.12 : accentOpacity
+                    )
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: NotchProDesign.cardRadius, style: .continuous))
+            .scaleEffect(hoverEnabled && isHovering ? 1.015 : 1)
+            .animation(.smooth(duration: 0.22), value: isHovering)
+            .onHover { hovering in
+                guard hoverEnabled else { return }
+                isHovering = hovering
+            }
     }
 }
 

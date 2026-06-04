@@ -17,4 +17,5 @@ extension KeyboardShortcuts.Name {
     static let toggleNotchOpen = Self("toggleNotchOpen", default: .init(.i, modifiers: [.command, .shift]))
     static let toggleMusicPlayPause = Self("toggleMusicPlayPause", default: .init(.m, modifiers: [.command, .shift]))
     static let toggleShelf = Self("toggleShelf", default: .init(.s, modifiers: [.command, .shift]))
+    static let quickScreenshot = Self("quickScreenshot", default: .init(.six, modifiers: [.shift, .command]))
 }

@@ -76,6 +76,49 @@ struct ContentView: View {
         )
     }
 
+    @ViewBuilder
+    private var notchShellBorderOverlay: some View {
+        if accentGlowEnabled && vm.notchState == .open {
+            let glowColors = notchAccentGlowColors
+            currentNotchShape
+                .stroke(
+                    LinearGradient(
+                        colors: glowColors,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+                .shadow(color: glowColors.first?.opacity(0.22) ?? .clear, radius: 6)
+        } else if vm.notchState == .open && glassmorphismEnabled {
+            currentNotchShape
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.38),
+                            Color.white.opacity(0.12),
+                            Color.white.opacity(0.06),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.75
+                )
+        }
+    }
+
+    private var notchAccentGlowColors: [Color] {
+        if musicManager.isPlaying && Defaults[.playerColorTinting] && !performanceMode {
+            let c = Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.5)
+            return [c.opacity(0.85), c.opacity(0.25), Color.effectiveAccent.opacity(0.3)]
+        }
+        return [
+            Color.effectiveAccent.opacity(0.8),
+            Color.effectiveAccent.opacity(0.2),
+            Color.cyan.opacity(0.35),
+        ]
+    }
+
     private var closedMusicActive: Bool {
         vm.notchState == .closed
             && (musicManager.isPlaying || !musicManager.isPlayerIdle)
@@ -135,38 +178,15 @@ struct ContentView: View {
                     .background {
                         ZStack {
                             if glassmorphismEnabled && vm.notchState == .open {
-                                RoundedRectangle(cornerRadius: topCornerRadius, style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                                RoundedRectangle(cornerRadius: topCornerRadius, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.black.opacity(0.68),
-                                                Color.black.opacity(0.82),
-                                                Color.black.opacity(0.92),
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                                RoundedRectangle(cornerRadius: topCornerRadius, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.white.opacity(0.06),
-                                                .clear,
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .center
-                                        )
-                                    )
-                                if musicManager.isPlaying && Defaults[.playerColorTinting] && !performanceMode {
-                                    NotchAmbientGlow(
-                                        color: Color(nsColor: musicManager.avgColor),
-                                        isActive: true
-                                    )
-                                    .offset(y: -20)
-                                }
+                                NotchGlassPanelBackground(
+                                    cornerRadius: topCornerRadius,
+                                    accent: musicManager.isPlaying && Defaults[.playerColorTinting] && !performanceMode
+                                        ? Color(nsColor: musicManager.avgColor)
+                                        : nil,
+                                    showAmbientGlow: musicManager.isPlaying
+                                        && Defaults[.playerColorTinting]
+                                        && !performanceMode
+                                )
                             } else if closedMusicActive {
                                 Color.clear
                             } else {
@@ -180,31 +200,7 @@ struct ContentView: View {
                     .conditionalModifier(closedMusicActive) { view in
                         view.background(Color.clear)
                     }
-                    .overlay {
-                        if accentGlowEnabled && vm.notchState == .open {
-                            let glowColors: [Color] = {
-                                if musicManager.isPlaying && Defaults[.playerColorTinting] && !performanceMode {
-                                    let c = Color(nsColor: musicManager.avgColor).ensureMinimumBrightness(factor: 0.5)
-                                    return [c.opacity(0.85), c.opacity(0.25), Color.effectiveAccent.opacity(0.3)]
-                                }
-                                return [
-                                    Color.effectiveAccent.opacity(0.8),
-                                    Color.effectiveAccent.opacity(0.2),
-                                    Color.cyan.opacity(0.35),
-                                ]
-                            }()
-                            currentNotchShape
-                                .stroke(
-                                    LinearGradient(
-                                        colors: glowColors,
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1.75
-                                )
-                                .shadow(color: glowColors.first?.opacity(0.35) ?? .clear, radius: 8)
-                        }
-                    }
+                    .overlay { notchShellBorderOverlay }
                     .overlay(alignment: .top) {
                         Rectangle()
                             .fill(.black)
@@ -213,9 +209,9 @@ struct ContentView: View {
                     }
                     .shadow(
                         color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
-                            ? .black.opacity(0.75) : .clear,
-                        radius: Defaults[.cornerRadiusScaling] ? 10 : 6,
-                        y: 4
+                            ? .black.opacity(vm.notchState == .open ? 0.38 : 0.55) : .clear,
+                        radius: vm.notchState == .open ? 18 : (Defaults[.cornerRadiusScaling] ? 10 : 6),
+                        y: vm.notchState == .open ? 10 : 4
                     )
                     .padding(
                         .bottom,

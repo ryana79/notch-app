@@ -61,10 +61,11 @@ struct WeatherGlanceView: View {
 
 struct WeatherGlanceExpandedView: View {
     @ObservedObject private var weatherManager = WeatherManager.shared
+    @State private var isHovering = false
 
     var body: some View {
         if let weather = weatherManager.weather {
-            NotchProCard(accent: .cyan, accentOpacity: 0.22) {
+            NotchProCard(accent: .cyan, accentOpacity: 0.22, hoverEnabled: false) {
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()
@@ -97,6 +98,9 @@ struct WeatherGlanceExpandedView: View {
                 }
             }
             .frame(minWidth: 140)
+            .scaleEffect(isHovering ? 1.02 : 1)
+            .animation(.smooth(duration: 0.22), value: isHovering)
+            .onHover { isHovering = $0 }
         } else if weatherManager.isLoading {
             NotchProCard {
                 HStack {

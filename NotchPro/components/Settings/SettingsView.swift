@@ -101,6 +101,9 @@ struct SettingsView: View {
 
 struct ProductivitySettings: View {
     @Default(.enableClipboardHistory) var enableClipboardHistory
+    @Default(.enableQuickScreenshot) var enableQuickScreenshot
+    @Default(.screenshotPushToShelf) var screenshotPushToShelf
+    @Default(.notchProShelf) var notchProShelf
     @Default(.showFocusTimer) var showFocusTimer
     @Default(.showWorkoutGlance) var showWorkoutGlance
     @Default(.showSystemStats) var showSystemStats
@@ -116,6 +119,17 @@ struct ProductivitySettings: View {
                 }
                 .onChange(of: enableClipboardHistory) {
                     ClipboardHistoryManager.shared.refreshMonitoring()
+                }
+
+                Defaults.Toggle(key: .enableQuickScreenshot) {
+                    Text("Quick screenshot")
+                }
+
+                if enableQuickScreenshot {
+                    Defaults.Toggle(key: .screenshotPushToShelf) {
+                        Text("Add screenshots to Shelf")
+                    }
+                    .disabled(!notchProShelf)
                 }
 
                 Defaults.Toggle(key: .showFocusTimer) {
@@ -157,7 +171,7 @@ struct ProductivitySettings: View {
             } header: {
                 Text("Productivity widgets")
             } footer: {
-                Text("Clipboard history automatically blocks passwords, API keys, and credit card numbers. Press ⌘⇧C to open clipboard panel.")
+                Text("Clipboard history blocks passwords, API keys, and credit cards. Press ⌘⇧C for clipboard history, ⌘⇧6 for a region screenshot (copied to clipboard). Grant Screen Recording in System Settings if capture fails.")
             }
 
             Section {
@@ -1822,6 +1836,7 @@ struct Shortcuts: View {
                 KeyboardShortcuts.Recorder("Play / Pause Music:", name: .toggleMusicPlayPause)
                 KeyboardShortcuts.Recorder("Toggle Shelf Tab:", name: .toggleShelf)
                 KeyboardShortcuts.Recorder("Clipboard History:", name: .clipboardHistoryPanel)
+                KeyboardShortcuts.Recorder("Quick Screenshot:", name: .quickScreenshot)
             }
         }
         .accentColor(.effectiveAccent)
