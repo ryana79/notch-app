@@ -70,7 +70,14 @@ jobs:
           fi
 
       - name: Prepare broker credentials for CI
-        run: cp NotchPro/Resources/BrokerCredentials.example.plist NotchPro/Resources/BrokerCredentials.plist
+        env:
+          SCHWAB_CLIENT_ID: ${{ secrets.SCHWAB_CLIENT_ID }}
+          SCHWAB_CLIENT_SECRET: ${{ secrets.SCHWAB_CLIENT_SECRET }}
+          SCHWAB_TOKEN_PROXY_URL: ${{ secrets.SCHWAB_TOKEN_PROXY_URL }}
+          NOTCHPRO_BROKER_PROXY_KEY: ${{ secrets.NOTCHPRO_BROKER_PROXY_KEY }}
+          WEBULL_APP_KEY: ${{ secrets.WEBULL_APP_KEY }}
+          WEBULL_APP_SECRET: ${{ secrets.WEBULL_APP_SECRET }}
+        run: ./scripts/ci-write-broker-plist.sh
 
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -project ${{ env.PROJECT_NAME }}.xcodeproj
