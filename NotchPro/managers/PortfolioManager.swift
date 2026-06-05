@@ -20,8 +20,14 @@ final class PortfolioManager: ObservableObject {
     private var refreshTimer: Timer?
     private var isRefreshScheduled = false
 
+    private static let portfolioGlanceMigrationKey = "didMigratePortfolioGlance1.0.4"
+
     private init() {
         updateConnectionStates()
+        if hasAnyConnection, !UserDefaults.standard.bool(forKey: Self.portfolioGlanceMigrationKey) {
+            Defaults[.showPortfolioGlance] = true
+            UserDefaults.standard.set(true, forKey: Self.portfolioGlanceMigrationKey)
+        }
     }
 
     var hasAnyConnection: Bool {
@@ -34,6 +40,15 @@ final class PortfolioManager: ObservableObject {
             return
         }
         updateConnectionStates()
+        if hasAnyConnection {
+            resumeRefreshTimer()
+        }
+    }
+
+    func enableGlanceAndRefresh() {
+        Defaults[.showPortfolioGlance] = true
+        updateConnectionStates()
+        resumeRefreshTimer()
     }
 
     func stop() {
@@ -70,7 +85,7 @@ final class PortfolioManager: ObservableObject {
         do {
             try await SchwabBrokerService.shared.connect()
             schwabState = .connected
-            await refresh()
+            enableGlanceAndRefresh()
         } catch {
             schwabState = .error(error.localizedDescription)
             lastError = error.localizedDescription
@@ -83,7 +98,7 @@ final class PortfolioManager: ObservableObject {
         do {
             try await SchwabBrokerService.shared.connect(manualRedirectURL: manualRedirectURL)
             schwabState = .connected
-            await refresh()
+            enableGlanceAndRefresh()
         } catch {
             schwabState = .error(error.localizedDescription)
             lastError = error.localizedDescription
@@ -100,9 +115,13 @@ final class PortfolioManager: ObservableObject {
         webullState = .connecting
         lastError = nil
         do {
-            try await WebullBrokerService.shared.connect()
+            try await WebullBrokerService.shared.connect {
+                self.webullState = .awaitingVerification(
+                    "Approve the SMS code in Webull → Menu → Messages → OpenAPI Notifications."
+                )
+            }
             webullState = .connected
-            await refresh()
+            enableGlanceAndRefresh()
         } catch {
             if case WebullBrokerError.awaitingVerification = error {
                 webullState = .awaitingVerification("Open Webull → Menu → Messages → OpenAPI Notifications and enter the SMS code.")
@@ -120,8 +139,12 @@ final class PortfolioManager: ObservableObject {
     }
 
     func refresh() async {
-        guard Defaults[.showPortfolioGlance], hasAnyConnection else {
+        guard hasAnyConnection else {
             snapshot = nil
+            isLoading = false
+            return
+        }
+        guard Defaults[.showPortfolioGlance] else {
             isLoading = false
             return
         }

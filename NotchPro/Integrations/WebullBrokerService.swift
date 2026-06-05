@@ -54,7 +54,7 @@ final class WebullBrokerService {
         KeychainStore.deleteAll(accounts: BrokerCredentialKey.webullUserTokens)
     }
 
-    func connect() async throws {
+    func connect(onPendingVerification: (() -> Void)? = nil) async throws {
         guard BrokerConfig.shared.isWebullConfigured else { throw WebullBrokerError.notConfigured }
 
         let tokenResponse = try await createToken(appKey: appKey, appSecret: appSecret)
@@ -66,6 +66,7 @@ final class WebullBrokerService {
         }
 
         if status.uppercased() == "PENDING" {
+            onPendingVerification?()
             try await pollUntilVerified(appKey: appKey, appSecret: appSecret)
             return
         }
@@ -144,22 +145,16 @@ final class WebullBrokerService {
 
     private func createToken(appKey: String, appSecret: String) async throws -> [String: Any] {
         let path = "/openapi/auth/token/create"
-        let timestamp = Self.utcTimestamp()
-        var request = URLRequest(url: URL(string: "https://\(host)\(path)")!)
-        request.httpMethod = "POST"
-        request.setValue(appKey, forHTTPHeaderField: "x-app-key")
-        request.setValue(appSecret, forHTTPHeaderField: "x-app-secret")
-        request.setValue(timestamp, forHTTPHeaderField: "x-timestamp")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = "{}".data(using: .utf8)
-
-        let (data, response) = try await session.data(for: request)
+        let body = "{}".data(using: .utf8)!
+        let (data, response) = try await signedTokenRequest(
+            method: "POST",
+            path: path,
+            body: body,
+            appKey: appKey,
+            appSecret: appSecret
+        )
         try validateHTTP(response: response, data: data)
-
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw WebullBrokerError.invalidResponse
-        }
-        return json
+        return try parseJSONObject(data)
     }
 
     private func pollUntilVerified(appKey: String, appSecret: String) async throws {
@@ -180,27 +175,66 @@ final class WebullBrokerService {
 
     private func checkToken(appKey: String, appSecret: String) async throws -> [String: Any] {
         let path = "/openapi/auth/token/check"
+        let body = "{}".data(using: .utf8)!
+        let (data, response) = try await signedTokenRequest(
+            method: "POST",
+            path: path,
+            body: body,
+            appKey: appKey,
+            appSecret: appSecret
+        )
+        try validateHTTP(response: response, data: data)
+        return try parseJSONObject(data)
+    }
+
+    private func signedTokenRequest(
+        method: String,
+        path: String,
+        body: Data?,
+        appKey: String,
+        appSecret: String
+    ) async throws -> (Data, URLResponse) {
         let timestamp = Self.utcTimestamp()
+        let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        let bodyString = body.flatMap { String(data: $0, encoding: .utf8) }
+        let signature = Self.generateSignature(
+            path: path,
+            query: [:],
+            bodyString: bodyString,
+            appKey: appKey,
+            appSecret: appSecret,
+            host: host,
+            timestamp: timestamp,
+            nonce: nonce
+        )
+
         var request = URLRequest(url: URL(string: "https://\(host)\(path)")!)
-        request.httpMethod = "POST"
+        request.httpMethod = method
         request.setValue(appKey, forHTTPHeaderField: "x-app-key")
         request.setValue(appSecret, forHTTPHeaderField: "x-app-secret")
         request.setValue(timestamp, forHTTPHeaderField: "x-timestamp")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = "{}".data(using: .utf8)
-
-        let (data, response) = try await session.data(for: request)
-        try validateHTTP(response: response, data: data)
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw WebullBrokerError.invalidResponse
+        request.setValue(signature, forHTTPHeaderField: "x-signature")
+        request.setValue("HMAC-SHA1", forHTTPHeaderField: "x-signature-algorithm")
+        request.setValue("1.0", forHTTPHeaderField: "x-signature-version")
+        request.setValue(nonce, forHTTPHeaderField: "x-signature-nonce")
+        request.setValue("v2", forHTTPHeaderField: "x-version")
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = body
         }
-        return json
+        return try await session.data(for: request)
     }
 
     private func persistToken(_ token: String, tokenResponse: [String: Any]) throws {
         try KeychainStore.save(token, account: BrokerCredentialKey.webullAccessToken)
-        if let expireTime = tokenResponse["expire_time"] as? String,
-           let expiry = ISO8601DateFormatter().date(from: expireTime) {
+        if let expiresMs = tokenResponse["expires"] as? Int {
+            let expiry = Date(timeIntervalSince1970: Double(expiresMs) / 1000)
+            try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
+        } else if let expiresMs = tokenResponse["expires"] as? Double {
+            let expiry = Date(timeIntervalSince1970: expiresMs / 1000)
+            try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
+        } else if let expireTime = tokenResponse["expire_time"] as? String,
+                  let expiry = ISO8601DateFormatter().date(from: expireTime) {
             try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
         } else {
             let fallback = Date().addingTimeInterval(15 * 24 * 3600)
@@ -221,12 +255,33 @@ final class WebullBrokerService {
         )
         try validateHTTP(response: response, data: data)
 
-        guard let accounts = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-              let first = accounts.first,
-              let accountID = first["account_id"] as? String else {
+        let json = try parseJSONObject(data)
+        let accounts: [[String: Any]]
+        if let list = json["accounts"] as? [[String: Any]] {
+            accounts = list
+        } else if let list = json["data"] as? [[String: Any]] {
+            accounts = list
+        } else if let list = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            accounts = list
+        } else {
+            throw WebullBrokerError.invalidResponse
+        }
+
+        guard let first = accounts.first,
+              let accountID = first["account_id"] as? String ?? first["accountId"] as? String else {
             throw WebullBrokerError.invalidResponse
         }
         return accountID
+    }
+
+    private func parseJSONObject(_ data: Data) throws -> [String: Any] {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw WebullBrokerError.invalidResponse
+        }
+        if let nested = json["data"] as? [String: Any] {
+            return nested
+        }
+        return json
     }
 
     private func signedRequest(
@@ -328,6 +383,10 @@ final class WebullBrokerService {
     private func validateHTTP(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw WebullBrokerError.invalidResponse }
         guard (200...299).contains(http.statusCode) else {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let message = json["message"] as? String {
+                throw WebullBrokerError.apiError(message)
+            }
             let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
             throw WebullBrokerError.apiError(message)
         }

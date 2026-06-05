@@ -127,6 +127,15 @@ struct IntegrationsSettings: View {
                 }
                 .disabled(!config.isWebullConfigured || portfolio.webullState == .connecting)
 
+                if case .awaitingVerification = portfolio.webullState {
+                    Button("Retry Webull connection") {
+                        Task {
+                            await portfolio.connectWebull()
+                            statusMessage = portfolio.lastError ?? "Webull connected."
+                        }
+                    }
+                }
+
                 if WebullBrokerService.shared.isConnected {
                     Button("Disconnect Webull", role: .destructive) {
                         portfolio.disconnectWebull()

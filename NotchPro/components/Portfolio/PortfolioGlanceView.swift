@@ -22,9 +22,21 @@ struct NotchPortfolioPill: View {
                 }
             }
         } else if showPortfolioGlance, portfolio.isLoading {
-            ProgressView()
-                .controlSize(.mini)
-                .frame(width: 40, height: 20)
+            NotchProPill(tint: .blue) {
+                ProgressView()
+                    .controlSize(.mini)
+                    .frame(width: 28, height: 14)
+            }
+        } else if showPortfolioGlance, portfolio.hasAnyConnection {
+            NotchProPill(tint: .green) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.caption2)
+                    Text("Portfolio")
+                        .font(.caption2.weight(.semibold))
+                }
+                .foregroundStyle(.white.opacity(0.9))
+            }
         }
     }
 
@@ -94,10 +106,24 @@ struct PortfolioExpandedView: View {
                 }
             }
         } else if portfolio.hasAnyConnection {
-            NotchProCard {
-                Text("No open positions")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            NotchProCard(accent: .green, accentOpacity: 0.24) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let error = portfolio.lastError {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("No open positions")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Button("Refresh") {
+                        Task { await portfolio.refresh() }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white.opacity(0.85))
+                }
             }
         }
     }
