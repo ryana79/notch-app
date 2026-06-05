@@ -15,7 +15,7 @@ import SwiftUI
 import SwiftUIIntrospect
 
 struct SettingsView: View {
-    @State private var selectedTab = "General"
+    @State private var selectedTab: SettingsTab = .general
     @State private var accentColorUpdateTrigger = UUID()
 
     let updaterController: SPUStandardUpdaterController?
@@ -26,71 +26,56 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedTab) {
-                NavigationLink(value: "General") {
-                    Label("General", systemImage: "gear")
+            VStack(spacing: 0) {
+                SettingsSidebarHeader()
+                Divider().opacity(0.35)
+                List(selection: $selectedTab) {
+                    ForEach(SettingsTab.allCases) { tab in
+                        NavigationLink(value: tab) {
+                            SettingsSidebarRow(tab: tab, isSelected: selectedTab == tab)
+                        }
+                        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
                 }
-                NavigationLink(value: "Media") {
-                    Label("Media", systemImage: "play.laptopcomputer")
-                }
-                NavigationLink(value: "Productivity") {
-                    Label("Productivity", systemImage: "bolt.fill")
-                }
-                NavigationLink(value: "Integrations") {
-                    Label("Integrations", systemImage: "link")
-                }
-                NavigationLink(value: "Features") {
-                    Label("More features", systemImage: "slider.horizontal.3")
-                }
-                NavigationLink(value: "About") {
-                    Label("About", systemImage: "info.circle")
-                }
+                .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
             }
-            .listStyle(SidebarListStyle())
-            .tint(.effectiveAccent)
+            .background(Color(nsColor: .underPageBackgroundColor))
             .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(200)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 260)
         } detail: {
             Group {
                 switch selectedTab {
-                case "General":
+                case .general:
                     GeneralSettings()
-                case "Media":
+                case .media:
                     Media()
-                case "Productivity":
+                case .productivity:
                     ProductivitySettings()
-                case "Integrations":
+                case .integrations:
                     IntegrationsSettings()
-                case "Features":
+                case .features:
                     MoreFeaturesSettings()
-                case "About":
+                case .about:
                     if let controller = updaterController {
                         About(updaterController: controller)
                     } else {
-                        // Fallback with a default controller
                         About(
                             updaterController: SPUStandardUpdaterController(
                                 startingUpdater: true, updaterDelegate: nil,
                                 userDriverDelegate: nil))
                     }
-                default:
-                    GeneralSettings()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .navigationSplitViewStyle(.balanced)
         .toolbar(removing: .sidebarToggle)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("")
-                    .frame(width: 0, height: 0)
-                    .accessibilityHidden(true)
-            }
-        }
         .formStyle(.grouped)
-        .frame(width: 700)
-        .background(Color(NSColor.windowBackgroundColor))
+        .frame(minWidth: 780, minHeight: 620)
         .tint(.effectiveAccent)
         .id(accentColorUpdateTrigger)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("AccentColorChanged"))) { _ in
@@ -1889,6 +1874,126 @@ func warningBadge(_ text: String, _ description: String) -> some View {
             }
             Spacer()
         }
+    }
+}
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general = "General"
+    case media = "Media"
+    case productivity = "Productivity"
+    case integrations = "Integrations"
+    case features = "More features"
+    case about = "About"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .general: return "gear"
+        case .media: return "play.laptopcomputer"
+        case .productivity: return "bolt.fill"
+        case .integrations: return "link"
+        case .features: return "slider.horizontal.3"
+        case .about: return "info.circle"
+        }
+    }
+}
+
+struct SettingsSidebarHeader: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.cyan.opacity(0.55), .purple.opacity(0.65)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 40, height: 40)
+                Image(systemName: "bolt.horizontal.circle.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("NotchPro")
+                    .font(.headline.weight(.semibold))
+                Text("Settings")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 12)
+    }
+}
+
+struct SettingsSidebarRow: View {
+    let tab: SettingsTab
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: tab.icon)
+                .font(.body.weight(.medium))
+                .frame(width: 20)
+                .foregroundStyle(isSelected ? Color.effectiveAccent : .secondary)
+            Text(tab.rawValue)
+                .font(.body.weight(isSelected ? .semibold : .regular))
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background {
+            if isSelected {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.effectiveAccent.opacity(0.14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Color.effectiveAccent.opacity(0.28), lineWidth: 1)
+                    }
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+struct SettingsSectionCard<Content: View>: View {
+    var title: String?
+    var footer: String?
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let title {
+                Text(title.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 4)
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                content()
+            }
+            .padding(14)
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                    }
+            }
+            if let footer {
+                Text(footer)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+            }
+        }
+        .padding(.vertical, 6)
     }
 }
 

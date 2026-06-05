@@ -59,7 +59,8 @@ if [[ -z "$DEPLOY_URL" ]]; then
   exit 1
 fi
 
-PROXY_URL="${DEPLOY_URL}/api/schwab/token"
+# Use the stable production alias (preview deployment URLs require Vercel login).
+PROXY_URL="https://broker-proxy.vercel.app/api/schwab/token"
 
 if grep -q '^SCHWAB_TOKEN_PROXY_URL=' "$ENV_FILE" 2>/dev/null; then
   sed -i '' "s|^SCHWAB_TOKEN_PROXY_URL=.*|SCHWAB_TOKEN_PROXY_URL=$PROXY_URL|" "$ENV_FILE"

@@ -170,29 +170,53 @@ final class SchwabBrokerService {
         let config = BrokerConfig.shared
 
         if let proxyURL = config.schwabTokenProxyURL {
-            var request = URLRequest(url: proxyURL)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            if !config.brokerProxyAPIKey.isEmpty {
-                request.setValue(config.brokerProxyAPIKey, forHTTPHeaderField: "X-NotchPro-Key")
+            do {
+                return try await requestTokensViaProxy(proxyURL: proxyURL, body: body, apiKey: config.brokerProxyAPIKey)
+            } catch {
+                if !config.schwabClientSecret.isEmpty {
+                    return try await requestTokensDirect(body: body, config: config)
+                }
+                throw error
             }
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-            let (data, response) = try await session.data(for: request)
-            if (response as? HTTPURLResponse)?.statusCode == 401 {
-                throw SchwabBrokerError.authRequired
-            }
-            try validateHTTP(response: response, data: data)
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                throw SchwabBrokerError.invalidResponse
-            }
-            return json
         }
 
         guard !config.schwabClientSecret.isEmpty else {
             throw SchwabBrokerError.notConfigured
         }
 
+        return try await requestTokensDirect(body: body, config: config)
+    }
+
+    private func requestTokensViaProxy(proxyURL: URL, body: [String: String], apiKey: String) async throws -> [String: Any] {
+        var request = URLRequest(url: proxyURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !apiKey.isEmpty {
+            request.setValue(apiKey, forHTTPHeaderField: "X-NotchPro-Key")
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SchwabBrokerError.invalidResponse }
+
+        if http.statusCode == 401, String(data: data, encoding: .utf8)?.contains("<!doctype html>") == true {
+            throw SchwabBrokerError.apiError(
+                "Schwab token proxy is unreachable. Use https://broker-proxy.vercel.app/api/schwab/token"
+            )
+        }
+
+        if http.statusCode == 401 {
+            throw SchwabBrokerError.authRequired
+        }
+
+        try validateHTTP(response: response, data: data)
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw SchwabBrokerError.invalidResponse
+        }
+        return json
+    }
+
+    private func requestTokensDirect(body: [String: String], config: BrokerConfig) async throws -> [String: Any] {
         var request = URLRequest(url: URL(string: "\(baseURL)/v1/oauth/token")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")

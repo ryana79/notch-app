@@ -65,9 +65,9 @@ final class WebullBrokerService {
             return
         }
 
-        if status.uppercased() == "PENDING" {
+        if status.uppercased() == "PENDING", let pendingToken = tokenResponse["token"] as? String {
             onPendingVerification?()
-            try await pollUntilVerified(appKey: appKey, appSecret: appSecret)
+            try await pollUntilVerified(appKey: appKey, appSecret: appSecret, pendingToken: pendingToken)
             return
         }
 
@@ -157,10 +157,14 @@ final class WebullBrokerService {
         return try parseJSONObject(data)
     }
 
-    private func pollUntilVerified(appKey: String, appSecret: String) async throws {
+    private func pollUntilVerified(appKey: String, appSecret: String, pendingToken: String) async throws {
         for _ in 0..<60 {
             try await Task.sleep(for: .seconds(5))
-            let statusResponse = try await checkToken(appKey: appKey, appSecret: appSecret)
+            let statusResponse = try await checkToken(
+                appKey: appKey,
+                appSecret: appSecret,
+                token: pendingToken
+            )
             let status = (statusResponse["status"] as? String) ?? ""
             if status.uppercased() == "NORMAL", let token = statusResponse["token"] as? String {
                 try persistToken(token, tokenResponse: statusResponse)
@@ -173,9 +177,9 @@ final class WebullBrokerService {
         throw WebullBrokerError.awaitingVerification
     }
 
-    private func checkToken(appKey: String, appSecret: String) async throws -> [String: Any] {
+    private func checkToken(appKey: String, appSecret: String, token: String) async throws -> [String: Any] {
         let path = "/openapi/auth/token/check"
-        let body = "{}".data(using: .utf8)!
+        let body = try JSONSerialization.data(withJSONObject: ["token": token])
         let (data, response) = try await signedTokenRequest(
             method: "POST",
             path: path,
@@ -383,9 +387,13 @@ final class WebullBrokerService {
     private func validateHTTP(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw WebullBrokerError.invalidResponse }
         guard (200...299).contains(http.statusCode) else {
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let message = json["message"] as? String {
-                throw WebullBrokerError.apiError(message)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let message = json["message"] as? String {
+                    throw WebullBrokerError.apiError(message)
+                }
+                if let code = json["error_code"] as? String {
+                    throw WebullBrokerError.apiError(code.replacingOccurrences(of: "_", with: " ").capitalized)
+                }
             }
             let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
             throw WebullBrokerError.apiError(message)
