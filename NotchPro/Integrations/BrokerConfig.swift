@@ -40,10 +40,19 @@ struct BrokerConfig {
 
         if let proxy = (plist["SchwabTokenProxyURL"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
            !proxy.isEmpty {
-            schwabTokenProxyURL = URL(string: proxy)
+            let normalized = Self.normalizeProxyURL(proxy)
+            schwabTokenProxyURL = URL(string: normalized)
         } else {
             schwabTokenProxyURL = nil
         }
+    }
+
+    /// Deployment preview URLs on Vercel require login; always use the stable production alias.
+    private static func normalizeProxyURL(_ raw: String) -> String {
+        if raw.contains("-ryana79s-projects.vercel.app") {
+            return "https://broker-proxy.vercel.app/api/schwab/token"
+        }
+        return raw
     }
 
     private static func loadPlist(named name: String) -> [String: Any]? {
