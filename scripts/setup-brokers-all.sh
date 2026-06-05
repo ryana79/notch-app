@@ -43,7 +43,8 @@ if vercel whoami &>/dev/null; then
   "$ROOT/scripts/deploy-broker-proxy.sh"
 else
   echo "Vercel not logged in — skipping proxy deploy."
-  echo "  Run: vercel login"
+  echo "  Create a token at https://vercel.com/account/tokens (in your browser), then:"
+  echo "    export VERCEL_TOKEN='...'   # or: vercel login --token"
   echo "  Then: ./scripts/deploy-broker-proxy.sh"
   echo ""
   echo "Continuing with local Schwab secret in app (OK for you, not ideal for friends)."

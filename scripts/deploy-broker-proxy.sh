@@ -20,7 +20,15 @@ for var in SCHWAB_CLIENT_ID SCHWAB_CLIENT_SECRET NOTCHPRO_BROKER_PROXY_KEY; do
 done
 
 if ! vercel whoami &>/dev/null; then
-  echo "Log in first: vercel login" >&2
+  echo "Vercel CLI is not authenticated." >&2
+  echo "" >&2
+  echo "Use your preferred browser (avoids Cursor opening the wrong Chrome profile):" >&2
+  echo "  1. Open https://vercel.com/account/tokens in the browser you want" >&2
+  echo "  2. Create a token, then run:" >&2
+  echo "       export VERCEL_TOKEN='your-token-here'" >&2
+  echo "  Or paste the token when prompted:" >&2
+  echo "       vercel login --token" >&2
+  echo "" >&2
   exit 1
 fi
 
