@@ -58,7 +58,7 @@ struct WorkoutExpandedView: View {
     @State private var isAddSetHovering = false
 
     var body: some View {
-        NotchProCard(accent: .orange, accentOpacity: 0.28) {
+        NotchProCard(accent: .orange, accentOpacity: 0.34) {
             VStack(alignment: .leading, spacing: 8) {
                 headerRow
                 progressRow

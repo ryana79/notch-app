@@ -65,7 +65,7 @@ struct WeatherGlanceExpandedView: View {
 
     var body: some View {
         if let weather = weatherManager.weather {
-            NotchProCard(accent: .cyan, accentOpacity: 0.22, hoverEnabled: false) {
+            NotchProCard(accent: .cyan, accentOpacity: 0.32, hoverEnabled: false) {
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()

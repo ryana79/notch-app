@@ -18,9 +18,20 @@ enum NotchProDesign {
             .fill(Color.white.opacity(opacity + hoverBoost))
     }
 
-    static func cardBorder(accent: Color = .white, opacity: Double = 0.12) -> some View {
+    static func cardBorder(accent: Color = .white, opacity: Double = 0.12, lineWidth: CGFloat = 1) -> some View {
         RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-            .strokeBorder(accent.opacity(opacity), lineWidth: 0.5)
+            .strokeBorder(
+                LinearGradient(
+                    colors: [
+                        accent.opacity(opacity + 0.18),
+                        accent.opacity(opacity * 0.55),
+                        Color.white.opacity(opacity * 0.35),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: lineWidth
+            )
     }
 }
 
@@ -80,12 +91,15 @@ struct NotchProCard<Content: View>: View {
             .background {
                 ZStack {
                     NotchProDesign.cardBackground(
-                        opacity: 0.08,
-                        hoverBoost: isHovering ? 0.06 : 0
+                        opacity: 0.09,
+                        hoverBoost: isHovering ? 0.07 : 0
                     )
+                    RoundedRectangle(cornerRadius: NotchProDesign.cardRadius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(isHovering ? 0.14 : 0.08), lineWidth: 0.5)
                     NotchProDesign.cardBorder(
                         accent: accent,
-                        opacity: isHovering ? accentOpacity + 0.12 : accentOpacity
+                        opacity: isHovering ? accentOpacity + 0.14 : accentOpacity,
+                        lineWidth: isHovering ? 1.25 : 1
                     )
                 }
             }
@@ -107,10 +121,23 @@ struct NotchProPill<Content: View>: View {
         content()
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(tint.opacity(0.12))
+            .background(
+                LinearGradient(
+                    colors: [tint.opacity(0.16), tint.opacity(0.08)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
             .overlay {
                 Capsule()
-                    .strokeBorder(tint.opacity(0.2), lineWidth: 0.5)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [tint.opacity(0.42), tint.opacity(0.18), Color.white.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.75
+                    )
             }
             .clipShape(Capsule())
     }
