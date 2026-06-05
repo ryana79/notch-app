@@ -221,8 +221,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           cp updater/appcast.xml "$RUNNER_TEMP/appcast.xml"
           git fetch origin main
-          git checkout main
-          git pull --rebase origin main
+          git checkout -f -B main origin/main
           cp "$RUNNER_TEMP/appcast.xml" updater/appcast.xml
           git add updater/appcast.xml
           if git diff --staged --quiet; then
