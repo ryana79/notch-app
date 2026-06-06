@@ -125,8 +125,14 @@ jobs:
           set -euo pipefail
           mkdir -p Release
           SIGN_IDENTITY="-"
+          KC="$RUNNER_TEMP/app-signing.keychain-db"
           if [[ -n "$BUILD_CERTIFICATE_BASE64" ]]; then
-            SIGN_IDENTITY="Apple Development"
+            DEV_ID="$(security find-identity -v -p codesigning "$KC" 2>/dev/null | sed -n 's/.*"\(Developer ID Application:.*\)".*/\1/p' | head -1)"
+            if [[ -n "$DEV_ID" ]]; then
+              SIGN_IDENTITY="$DEV_ID"
+            else
+              SIGN_IDENTITY="Apple Development"
+            fi
           fi
           xcodebuild \
             -project ${{ env.PROJECT_NAME }}.xcodeproj \
@@ -179,7 +185,10 @@ jobs:
           fi
           APP="Release/${{ env.PROJECT_NAME }}.app"
           KC="$RUNNER_TEMP/app-signing.keychain-db"
-          IDENTITY="$(security find-identity -v -p codesigning "$KC" 2>/dev/null | sed -n 's/.*"\(.*\)".*/\1/p' | head -1)"
+          IDENTITY="$(security find-identity -v -p codesigning "$KC" 2>/dev/null | sed -n 's/.*"\(Developer ID Application:.*\)".*/\1/p' | head -1)"
+          if [[ -z "$IDENTITY" ]]; then
+            IDENTITY="$(security find-identity -v -p codesigning "$KC" 2>/dev/null | sed -n 's/.*"\(.*\)".*/\1/p' | head -1)"
+          fi
           if [[ -z "$IDENTITY" ]]; then
             echo "No signing identity in keychain; skipping notarization."
             exit 0

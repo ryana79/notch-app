@@ -551,9 +551,6 @@ struct NotchHomeView: View {
                     if Defaults[.showWorkoutGlance] {
                         WorkoutExpandedView()
                     }
-                    if Defaults[.showCalendar] {
-                        NotchNextEventCard()
-                    }
                     if Defaults[.showFocusTimer] {
                         FocusTimerView()
                     }
@@ -570,23 +567,17 @@ struct NotchHomeView: View {
             .notchScrollExempt()
 
             VStack(spacing: 0) {
-                LinearGradient(
-                    colors: [Color.black.opacity(0.45), Color.clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 14)
                 Spacer(minLength: 0)
                 LinearGradient(
-                    colors: [Color.clear, Color.black.opacity(0.45)],
+                    colors: [Color.clear, Color.black.opacity(0.22)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: 14)
+                .frame(height: 10)
             }
             .allowsHitTesting(false)
         }
-        .frame(maxHeight: max(170, vm.notchSize.height - 40))
+        .frame(maxHeight: max(170, (portfolioManager.isDetailExpanded ? getOpenNotchSize().height : vm.notchSize.height) - 40))
         .notchScrollRegion { hovering in
             vm.isGestureSuppressedRegionHovered = hovering
         }

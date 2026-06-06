@@ -109,10 +109,13 @@ struct PortfolioExpandedView: View {
             }
             .frame(minWidth: 180)
             .contentShape(Rectangle())
-            .onTapGesture {
-                portfolio.isDetailExpanded = true
-                NotificationCenter.default.post(name: Notification.Name.notchLayoutChanged, object: nil)
-            }
+.onTapGesture {
+    portfolio.isDetailExpanded = true
+    NotificationCenter.default.post(name: Notification.Name.notchLayoutChanged, object: nil)
+    if NotchProCoordinator.shared.currentView != .home {
+        NotchProCoordinator.shared.currentView = .home
+    }
+}
         } else if portfolio.isLoading {
             NotchProCard {
                 HStack {

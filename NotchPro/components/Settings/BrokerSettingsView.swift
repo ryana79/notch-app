@@ -69,7 +69,7 @@ struct IntegrationsSettings: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
-            portfolio.updateConnectionStates()
+            portfolio.refreshConnectionStatesFromKeychain()
             groqAPIKey = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) ?? ""
         }
     }

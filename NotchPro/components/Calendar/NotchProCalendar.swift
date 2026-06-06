@@ -183,6 +183,10 @@ struct CalendarView: View {
     @ObservedObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
 
+    private var hasEvents: Bool {
+        !EventListView.filteredEvents(events: calendarManager.events).isEmpty
+    }
+
     var body: some View {
         NotchProCard(accent: Color.effectiveAccent, accentOpacity: 0.18) {
             VStack(spacing: 0) {
@@ -223,13 +227,12 @@ struct CalendarView: View {
                 )
                 if filteredEvents.isEmpty {
                     EmptyEventsView(selectedDate: selectedDate)
-                        .frame(maxHeight: .infinity, alignment: .center)
                 } else {
                     EventListView(events: calendarManager.events)
                 }
             }
         }
-        .frame(minHeight: 140, maxHeight: 155)
+        .frame(minHeight: hasEvents ? 140 : 118, maxHeight: hasEvents ? 155 : 128)
         .onChange(of: selectedDate) {
             Task {
                 await calendarManager.updateCurrentDate(selectedDate)
@@ -254,19 +257,20 @@ struct EmptyEventsView: View {
     let selectedDate: Date
     
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Image(systemName: "calendar.badge.checkmark")
-                .font(.title2)
+                .font(.body)
                 .foregroundColor(Color(white: 0.65))
             Text(Calendar.current.isDateInToday(selectedDate) ? "No events today" : "No events")
-                .font(.subheadline)
+                .font(.caption.weight(.medium))
                 .foregroundColor(.white)
             Text("Enjoy your free time!")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundColor(Color(white: 0.65))
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .top)
+        .padding(.top, 4)
+        .padding(.bottom, 2)
     }
 }
 

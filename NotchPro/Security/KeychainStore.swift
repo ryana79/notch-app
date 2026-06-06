@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import LocalAuthentication
 import Security
 
 enum KeychainStore {
@@ -30,15 +31,18 @@ enum KeychainStore {
     }
 
     static func load(account: String) -> String? {
+        let context = LAContext()
+        context.interactionNotAllowed = true
+
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
+            kSecUseAuthenticationContext as String: context,
         ]
-        // Never prompt for the login keychain password on background reads.
-        query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
