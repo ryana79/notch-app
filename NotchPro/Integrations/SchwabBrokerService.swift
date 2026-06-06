@@ -86,6 +86,7 @@ final class SchwabBrokerService {
         callbackServer?.stop()
         callbackServer = nil
         KeychainStore.deleteAll(accounts: BrokerCredentialKey.schwabUserTokens)
+        BrokerTokenCache.clearSchwab()
         BrokerConnectionCache.setSchwabConnected(false)
     }
 
@@ -142,17 +143,17 @@ final class SchwabBrokerService {
     }
 
     private func validAccessToken() async throws -> String {
-        if let expiryString = KeychainStore.load(account: BrokerCredentialKey.schwabTokenExpiry),
+        if let expiryString = BrokerTokenCache.schwabExpiry(),
            let expiryInterval = TimeInterval(expiryString),
            Date().timeIntervalSince1970 < expiryInterval - 60,
-           let token = KeychainStore.load(account: BrokerCredentialKey.schwabAccessToken) {
+           let token = BrokerTokenCache.schwabAccess() {
             return token
         }
         return try await refreshAccessToken()
     }
 
     private func refreshAccessToken() async throws -> String {
-        guard let refreshToken = KeychainStore.load(account: BrokerCredentialKey.schwabRefreshToken) else {
+        guard let refreshToken = BrokerTokenCache.schwabRefresh() else {
             throw SchwabBrokerError.authRequired
         }
 
@@ -247,13 +248,18 @@ final class SchwabBrokerService {
 
         try KeychainStore.save(accessToken, account: BrokerCredentialKey.schwabAccessToken)
 
-        if let refreshToken = json["refresh_token"] as? String {
-            try KeychainStore.save(refreshToken, account: BrokerCredentialKey.schwabRefreshToken)
+        var refreshToken: String? = json["refresh_token"] as? String
+        if let newRefresh = refreshToken {
+            try KeychainStore.save(newRefresh, account: BrokerCredentialKey.schwabRefreshToken)
+        } else {
+            refreshToken = BrokerTokenCache.schwabRefresh()
         }
 
         let expiresIn = (json["expires_in"] as? Double) ?? (json["expires_in"] as? Int).map(Double.init) ?? 1800
         let expiry = Date().addingTimeInterval(expiresIn)
-        try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.schwabTokenExpiry)
+        let expiryString = String(expiry.timeIntervalSince1970)
+        try KeychainStore.save(expiryString, account: BrokerCredentialKey.schwabTokenExpiry)
+        BrokerTokenCache.setSchwab(access: accessToken, refresh: refreshToken, expiry: expiryString)
         BrokerConnectionCache.setSchwabConnected(true)
     }
 

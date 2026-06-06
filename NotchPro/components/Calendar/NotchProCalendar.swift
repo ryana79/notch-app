@@ -232,7 +232,7 @@ struct CalendarView: View {
                 }
             }
         }
-        .frame(minHeight: hasEvents ? 140 : 118, maxHeight: hasEvents ? 155 : 128)
+        .fixedSize(horizontal: false, vertical: true)
         .onChange(of: selectedDate) {
             Task {
                 await calendarManager.updateCurrentDate(selectedDate)
