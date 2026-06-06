@@ -6,6 +6,17 @@
         <description>NotchPro updates for macOS</description>
         <language>en</language>
         <item>
+            <title>1.0.9</title>
+            <pubDate>Sat, 06 Jun 2026 21:37:09 +0000</pubDate>
+            <link>https://github.com/ryana79/notch-app/releases</link>
+            <sparkle:version>12</sparkle:version>
+            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[NotchPro v1.0.9
+]]></description>
+            <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.9/NotchPro.dmg" length="13512268" type="application/octet-stream" sparkle:edSignature="42f+G/1TrgLgrqhXcL503YpiwbiZxiwvyRRtQed//5sVmPbcG0D5lVn2rtqLrAFlrhDr8M3rIfpCbzTLOrkxAA=="/>
+        </item>
+        <item>
             <title>1.0.8</title>
             <pubDate>Sat, 06 Jun 2026 21:12:31 +0000</pubDate>
             <link>https://github.com/ryana79/notch-app/releases</link>
@@ -26,17 +37,6 @@
             <description><![CDATA[NotchPro v1.0.7
 ]]></description>
             <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.7/NotchPro.dmg" length="13453201" type="application/octet-stream" sparkle:edSignature="g23KTelLfNXFULZmQE7Xw34Gk1D2woQiHppDp5Z99sjRt58cH8q9HmegYI/ZbeFkJoWOnAKraThJYeOKEqejAw=="/>
-        </item>
-        <item>
-            <title>1.0.6</title>
-            <pubDate>Sat, 06 Jun 2026 20:36:57 +0000</pubDate>
-            <link>https://github.com/ryana79/notch-app/releases</link>
-            <sparkle:version>9</sparkle:version>
-            <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[NotchPro v1.0.6
-]]></description>
-            <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.6/NotchPro.dmg" length="13443278" type="application/octet-stream" sparkle:edSignature="ZGjMRYcC7/sM4L8G+h3S/tzY64HbzmQ+MFvxKG4Xlh/tPAcbx5OMJbhwgF3ngKZp65rvC4vaJW782wcSHSDYAg=="/>
         </item>
     </channel>
 </rss>
