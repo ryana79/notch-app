@@ -77,6 +77,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    func closeAllOpenNotches() {
+        vm.close()
+        for viewModel in viewModels.values {
+            viewModel.close()
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         ApplicationRelauncher.killHelperProcesses()
         NotificationCenter.default.removeObserver(self)

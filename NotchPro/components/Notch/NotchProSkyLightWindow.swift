@@ -109,7 +109,10 @@ class NotchProSkyLightWindow: NSPanel {
     
     private var observers: Set<AnyCancellable> = []
     
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool {
+        NotchProCoordinator.shared.isNotchTextInputActive
+    }
+
     override var canBecomeMain: Bool { false }
 
     override func makeTouchBar() -> NSTouchBar? {

@@ -70,6 +70,7 @@ class SettingsWindowController: NSWindowController {
     
     func showWindow() {
         AppUpdateManager.shared.checkInBackground()
+        (NSApp.delegate as? AppDelegate)?.closeAllOpenNotches()
 
         // Set app to regular mode first
         NSApp.setActivationPolicy(.regular)

@@ -206,18 +206,25 @@ struct PortfolioDetailPanel: View {
     var body: some View {
         if let snapshot = portfolio.snapshot {
             NotchProCard(accent: snapshot.totalDayChange >= 0 ? .green : .red, accentOpacity: 0.24) {
-                VStack(alignment: .leading, spacing: 12) {
-                    header(snapshot)
-                    holdingsSection(snapshot)
-                    newsSection
-                    insightsSection
-                    askSection(snapshot)
-                    footer(snapshot)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        header(snapshot)
+                        holdingsSection(snapshot)
+                        newsSection
+                        insightsSection
+                        askSection(snapshot)
+                        footer(snapshot)
+                    }
                 }
+                .notchScrollExempt()
             }
-            .frame(minWidth: 260)
+            .frame(minWidth: 260, maxHeight: 340)
             .onAppear {
+                NotchProCoordinator.shared.activateTextInput()
                 Task { await PortfolioInsightsManager.shared.refresh(snapshot: snapshot) }
+            }
+            .onDisappear {
+                NotchProCoordinator.shared.deactivateTextInput()
             }
         }
     }
@@ -347,16 +354,18 @@ struct PortfolioDetailPanel: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 6) {
-                    TextField("Ask about your portfolio or news…", text: $question)
-                        .textFieldStyle(.plain)
-                        .font(.caption2)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.white.opacity(0.06))
-                        )
-                        .onSubmit { submitQuestion(snapshot) }
+                    NotchTextInputField(
+                        placeholder: "Ask about your portfolio or news…",
+                        text: $question,
+                        onSubmit: { submitQuestion(snapshot) }
+                    )
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                    )
                     Button {
                         submitQuestion(snapshot)
                     } label: {

@@ -69,6 +69,7 @@ struct WorkoutExpandedView: View {
                     idleContent
                 }
 
+                muscleGroupsField
                 logSetRow
 
                 if workout.isActive {
@@ -197,38 +198,59 @@ struct WorkoutExpandedView: View {
         }
     }
 
+    private var muscleGroupsField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Muscle groups today")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            NotchTextInputField(
+                placeholder: "e.g. Chest, triceps, shoulders",
+                text: Binding(
+                    get: { workout.draftMuscleGroups },
+                    set: { workout.updateMuscleGroups($0) }
+                )
+            )
+            .font(.caption2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+        }
+    }
+
     private var logSetRow: some View {
         VStack(spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Exercise")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                NotchTextInputField(
+                    placeholder: "Bench press, squats, etc.",
+                    text: $workout.draftExerciseName
+                )
+                .font(.caption2)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+            }
+
             Menu {
                 ForEach(GymExercise.allCases) { exercise in
                     Button(exercise.rawValue) { workout.selectExercise(exercise) }
                 }
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: workout.draftExercise.symbol)
-                        .font(.caption2)
-                    Text(workout.draftExercise.rawValue)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 8, weight: .semibold))
-                }
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.white.opacity(0.9))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+                Text("Quick pick exercise")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.orange.opacity(0.9))
             }
             .menuStyle(.borderlessButton)
 
             HStack(spacing: 5) {
-                weightStepper
-                compactStepper(
-                    label: "Reps",
-                    value: "\(workout.draftReps)",
-                    onDecrement: { workout.adjustDraftReps(by: -1) },
-                    onIncrement: { workout.adjustDraftReps(by: 1) }
-                )
+                workoutTextField(label: "Weight (lb)", text: $workout.draftWeightText) {
+                    workout.applyDraftWeightFromText()
+                }
+                workoutTextField(label: "Reps", text: $workout.draftRepsText) {
+                    workout.applyDraftRepsFromText()
+                }
 
                 Button {
                     if !workout.isActive { workout.startWorkout() }
@@ -249,52 +271,26 @@ struct WorkoutExpandedView: View {
                         .scaleEffect(isAddSetHovering ? 1.08 : 1)
                 }
                 .buttonStyle(.plain)
-                .disabled(workout.draftWeight <= 0)
                 .animation(.smooth(duration: 0.2), value: isAddSetHovering)
                 .onHover { isAddSetHovering = $0 }
             }
         }
     }
 
-    private var weightStepper: some View {
-        HStack(spacing: 3) {
-            stepperButton(systemName: "minus") { workout.adjustDraftWeight(by: -2.5) }
-            Menu {
-                if !workout.recentWeights(for: workout.draftExercise.rawValue).isEmpty {
-                    Section("Recent") {
-                        ForEach(workout.recentWeights(for: workout.draftExercise.rawValue), id: \.self) { weight in
-                            Button("\(formatWorkoutWeight(weight)) lb") {
-                                workout.setDraftWeight(weight)
-                            }
-                        }
-                    }
-                }
-                Section("Pick weight (lb)") {
-                    ForEach(workout.weightPickerOptions(), id: \.self) { weight in
-                        Button("\(formatWorkoutWeight(weight)) lb") {
-                            workout.setDraftWeight(weight)
-                        }
-                    }
-                }
-            } label: {
-                VStack(spacing: 0) {
-                    Text("Weight")
-                        .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                    Text("\(formatWorkoutWeight(workout.draftWeight)) lb")
-                        .font(.caption2.weight(.bold).monospacedDigit())
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
+    private func workoutTextField(label: String, text: Binding<String>, onCommit: @escaping () -> Void) -> some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(.system(size: 8, weight: .medium))
+                .foregroundStyle(.tertiary)
+            NotchTextInputField(placeholder: label, text: text, onSubmit: onCommit)
+                .font(.caption2.weight(.bold).monospacedDigit())
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 5)
                 .frame(maxWidth: .infinity)
-            }
-            .menuStyle(.borderlessButton)
-            stepperButton(systemName: "plus") { workout.adjustDraftWeight(by: 2.5) }
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+                .onChange(of: text.wrappedValue) { _, _ in onCommit() }
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 3)
-        .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
     }
 
     private var historySection: some View {
@@ -333,42 +329,6 @@ struct WorkoutExpandedView: View {
         }
     }
 
-    private func compactStepper(
-        label: String,
-        value: String,
-        onDecrement: @escaping () -> Void,
-        onIncrement: @escaping () -> Void
-    ) -> some View {
-        HStack(spacing: 3) {
-            stepperButton(systemName: "minus", action: onDecrement)
-            VStack(spacing: 0) {
-                Text(label)
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                Text(value)
-                    .font(.caption2.weight(.bold).monospacedDigit())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .frame(maxWidth: .infinity)
-            stepperButton(systemName: "plus", action: onIncrement)
-        }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 3)
-        .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
-    }
-
-    private func stepperButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 8, weight: .bold))
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(Color.white.opacity(0.1)))
-                .foregroundStyle(.white.opacity(0.9))
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 private struct WorkoutChipStyle: ButtonStyle {

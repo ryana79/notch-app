@@ -61,6 +61,7 @@ final class WebullBrokerService {
 
     func disconnect() {
         KeychainStore.deleteAll(accounts: BrokerCredentialKey.webullUserTokens)
+        BrokerTokenCache.clearWebull()
         BrokerConnectionCache.setWebullConnected(false)
     }
 
@@ -88,16 +89,21 @@ final class WebullBrokerService {
 
     func fetchHoldings() async throws -> [PortfolioHolding] {
         guard BrokerConfig.shared.isWebullConfigured else { throw WebullBrokerError.notConfigured }
-        guard let accessToken = KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) else {
+        guard let accessToken = BrokerTokenCache.webullAccess() else {
             throw WebullBrokerError.missingToken
         }
 
         let accountID: String
-        if let saved = KeychainStore.load(account: BrokerCredentialKey.webullAccountID) {
+        if let saved = BrokerTokenCache.webullAccountID() {
             accountID = saved
         } else {
             accountID = try await fetchPrimaryAccountID(appKey: appKey, appSecret: appSecret, accessToken: accessToken)
             try KeychainStore.save(accountID, account: BrokerCredentialKey.webullAccountID)
+            BrokerTokenCache.setWebull(
+                access: accessToken,
+                expiry: BrokerTokenCache.webullExpiry(),
+                accountID: accountID
+            )
         }
 
         let path = "/openapi/account/positions"
@@ -258,19 +264,29 @@ final class WebullBrokerService {
     private func persistToken(_ token: String, tokenResponse: [String: Any]) throws {
         try KeychainStore.save(token, account: BrokerCredentialKey.webullAccessToken)
         BrokerConnectionCache.setWebullConnected(true)
+        var expiryString: String?
         if let expiresMs = tokenResponse["expires"] as? Int {
             let expiry = Date(timeIntervalSince1970: Double(expiresMs) / 1000)
-            try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
+            expiryString = String(expiry.timeIntervalSince1970)
+            try KeychainStore.save(expiryString!, account: BrokerCredentialKey.webullTokenExpiry)
         } else if let expiresMs = tokenResponse["expires"] as? Double {
             let expiry = Date(timeIntervalSince1970: expiresMs / 1000)
-            try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
+            expiryString = String(expiry.timeIntervalSince1970)
+            try KeychainStore.save(expiryString!, account: BrokerCredentialKey.webullTokenExpiry)
         } else if let expireTime = tokenResponse["expire_time"] as? String,
                   let expiry = ISO8601DateFormatter().date(from: expireTime) {
-            try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
+            expiryString = String(expiry.timeIntervalSince1970)
+            try KeychainStore.save(expiryString!, account: BrokerCredentialKey.webullTokenExpiry)
         } else {
             let fallback = Date().addingTimeInterval(15 * 24 * 3600)
-            try KeychainStore.save(String(fallback.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)
+            expiryString = String(fallback.timeIntervalSince1970)
+            try KeychainStore.save(expiryString!, account: BrokerCredentialKey.webullTokenExpiry)
         }
+        BrokerTokenCache.setWebull(
+            access: token,
+            expiry: expiryString,
+            accountID: BrokerTokenCache.webullAccountID()
+        )
     }
 
     private func fetchPrimaryAccountID(appKey: String, appSecret: String, accessToken: String) async throws -> String {

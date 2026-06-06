@@ -565,17 +565,6 @@ struct NotchHomeView: View {
                 .padding(.bottom, 4)
             }
             .notchScrollExempt()
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                LinearGradient(
-                    colors: [Color.clear, Color.black.opacity(0.22)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 10)
-            }
-            .allowsHitTesting(false)
         }
         .frame(maxHeight: max(170, (portfolioManager.isDetailExpanded ? getOpenNotchSize().height : vm.notchSize.height) - 40))
         .notchScrollRegion { hovering in

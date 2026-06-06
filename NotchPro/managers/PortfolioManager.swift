@@ -101,16 +101,23 @@ final class PortfolioManager: ObservableObject {
     }
 
     private func reconcileBrokerConnectionCache() {
-        if KeychainStore.load(account: BrokerCredentialKey.schwabRefreshToken) != nil {
+        BrokerTokenCache.warmSchwabFromKeychain()
+        BrokerTokenCache.warmWebullFromKeychain()
+        if BrokerTokenCache.schwabRefresh() != nil {
             BrokerConnectionCache.setSchwabConnected(true)
         } else if BrokerConnectionCache.schwabConnected {
             BrokerConnectionCache.setSchwabConnected(false)
         }
-        if KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) != nil {
+        if BrokerTokenCache.webullAccess() != nil {
             BrokerConnectionCache.setWebullConnected(true)
         } else if BrokerConnectionCache.webullConnected {
             BrokerConnectionCache.setWebullConnected(false)
         }
+    }
+
+    func warmBrokerTokensForRefresh() {
+        BrokerTokenCache.warmSchwabFromKeychain()
+        BrokerTokenCache.warmWebullFromKeychain()
     }
 
     func connectSchwab() async {
@@ -189,6 +196,7 @@ final class PortfolioManager: ObservableObject {
 
         isLoading = true
         defer { isLoading = false }
+        warmBrokerTokensForRefresh()
 
         var allHoldings: [PortfolioHolding] = []
         var connected: [BrokerKind] = []

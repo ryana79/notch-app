@@ -26,6 +26,7 @@ final class PortfolioInsightsManager: ObservableObject {
 
     private let session: URLSession
     private let groqEndpoint = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
+    private var cachedHasAPIKey: Bool?
 
     private init() {
         let config = URLSessionConfiguration.ephemeral
@@ -38,10 +39,14 @@ final class PortfolioInsightsManager: ObservableObject {
     }
 
     var hasAPIKey: Bool {
+        if let cachedHasAPIKey { return cachedHasAPIKey }
         guard let key = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) else {
+            cachedHasAPIKey = false
             return false
         }
-        return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasKey = !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        cachedHasAPIKey = hasKey
+        return hasKey
     }
 
     var canGenerateInsights: Bool {
@@ -55,10 +60,12 @@ final class PortfolioInsightsManager: ObservableObject {
             return
         }
         try KeychainStore.save(trimmed, account: IntegrationCredentialKey.groqAPIKey)
+        cachedHasAPIKey = true
     }
 
     func clearAPIKey() {
         KeychainStore.delete(account: IntegrationCredentialKey.groqAPIKey)
+        cachedHasAPIKey = false
     }
 
     func refresh(snapshot: PortfolioSnapshot) async {
