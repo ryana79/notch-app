@@ -31,11 +31,19 @@ final class PortfolioInsightsManager: ObservableObject {
         session = URLSession(configuration: config)
     }
 
+    var usesBuiltInAI: Bool {
+        BrokerConfig.shared.isInsightsProxyConfigured
+    }
+
     var hasAPIKey: Bool {
         guard let key = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) else {
             return false
         }
         return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var canGenerateInsights: Bool {
+        usesBuiltInAI || hasAPIKey
     }
 
     func saveAPIKey(_ key: String) throws {
@@ -49,9 +57,6 @@ final class PortfolioInsightsManager: ObservableObject {
 
     func clearAPIKey() {
         KeychainStore.delete(account: IntegrationCredentialKey.groqAPIKey)
-        insight = nil
-        headlines = []
-        lastError = nil
     }
 
     func refresh(snapshot: PortfolioSnapshot) async {
@@ -59,12 +64,6 @@ final class PortfolioInsightsManager: ObservableObject {
 
         let symbols = Array(Set(snapshot.holdings.map(\.symbol))).sorted().prefix(6)
         headlines = await fetchNews(symbols: Array(symbols))
-
-        guard hasAPIKey else {
-            lastError = nil
-            insight = nil
-            return
-        }
 
         await generateInsight(snapshot: snapshot)
     }
@@ -134,13 +133,7 @@ final class PortfolioInsightsManager: ObservableObject {
         return String(block[start..<end])
     }
 
-    private func generateInsight(snapshot: PortfolioSnapshot) async {
-        guard let apiKey = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) else { return }
-
-        isGenerating = true
-        lastError = nil
-        defer { isGenerating = false }
-
+    private func buildPrompt(snapshot: PortfolioSnapshot) -> String {
         let holdingsSummary = snapshot.holdings.prefix(12).map { holding in
             var line = "\(holding.symbol): $\(String(format: "%.0f", holding.marketValue))"
             if let pct = holding.dayChangePercent {
@@ -154,7 +147,7 @@ final class PortfolioInsightsManager: ObservableObject {
             ? (snapshot.totalDayChange / snapshot.totalMarketValue) * 100
             : 0
 
-        let prompt = """
+        return """
         Portfolio total: $\(String(format: "%.0f", snapshot.totalMarketValue)) (day change \(String(format: "%+.1f", dayPct))%).
 
         Holdings:
@@ -165,7 +158,84 @@ final class PortfolioInsightsManager: ObservableObject {
 
         Give 3–4 concise bullet points: portfolio health, notable movers, and any news-driven risks or opportunities. Plain language, under 120 words total.
         """
+    }
 
+    private func generateInsight(snapshot: PortfolioSnapshot) async {
+        isGenerating = true
+        lastError = nil
+        defer { isGenerating = false }
+
+        let prompt = buildPrompt(snapshot: snapshot)
+
+        if BrokerConfig.shared.isInsightsProxyConfigured,
+           let proxyURL = BrokerConfig.shared.portfolioInsightsProxyURL {
+            if await generateViaProxy(prompt: prompt, url: proxyURL) {
+                return
+            }
+        }
+
+        if hasAPIKey, let apiKey = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) {
+            await generateViaGroq(prompt: prompt, apiKey: apiKey)
+            if insight != nil { return }
+        }
+
+        insight = generateLocalFallback(snapshot: snapshot)
+        lastError = nil
+    }
+
+    private func generateLocalFallback(snapshot: PortfolioSnapshot) -> String {
+        let dayPct = snapshot.totalMarketValue > 0
+            ? (snapshot.totalDayChange / snapshot.totalMarketValue) * 100
+            : 0
+        let direction = dayPct >= 0 ? "up" : "down"
+        var lines = [
+            "• Portfolio is \(direction) \(String(format: "%.1f", abs(dayPct)))% today ($\(String(format: "%.0f", abs(snapshot.totalDayChange))))."
+        ]
+        if let top = snapshot.holdings.first {
+            lines.append("• Largest position: \(top.symbol) at $\(String(format: "%.0f", top.marketValue)).")
+        }
+        if let mover = snapshot.holdings.compactMap({ h -> (PortfolioHolding, Double)? in
+            guard let pct = h.dayChangePercent else { return nil }
+            return (h, abs(pct))
+        }).max(by: { $0.1 < $1.1 })?.0, let pct = mover.dayChangePercent {
+            lines.append("• Biggest mover: \(mover.symbol) \(String(format: "%+.1f", pct))%.")
+        }
+        if let headline = headlines.first {
+            lines.append("• News: \(headline.symbol) — \(headline.title)")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private func generateViaProxy(prompt: String, url: URL) async -> Bool {
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(BrokerConfig.shared.brokerProxyAPIKey, forHTTPHeaderField: "x-notchpro-key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["prompt": prompt])
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                lastError = "Could not reach insights service."
+                return false
+            }
+            guard (200...299).contains(http.statusCode) else {
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let error = json["error"] as? String {
+                    lastError = error
+                } else {
+                    lastError = "Insights service unavailable (HTTP \(http.statusCode))."
+                }
+                return false
+            }
+            return parseGroqResponse(data)
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    private func generateViaGroq(prompt: String, apiKey: String) async {
         var request = URLRequest(url: groqEndpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -196,17 +266,23 @@ final class PortfolioInsightsManager: ObservableObject {
                 }
                 return
             }
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = json["choices"] as? [[String: Any]],
-                  let first = choices.first,
-                  let message = first["message"] as? [String: Any],
-                  let content = message["content"] as? String else {
-                lastError = "Unexpected Groq response."
-                return
-            }
-            insight = content.trimmingCharacters(in: .whitespacesAndNewlines)
+            _ = parseGroqResponse(data)
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    private func parseGroqResponse(_ data: Data) -> Bool {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]],
+              let first = choices.first,
+              let message = first["message"] as? [String: Any],
+              let content = message["content"] as? String else {
+            lastError = "Unexpected AI response."
+            return false
+        }
+        insight = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        lastError = nil
+        return true
     }
 }

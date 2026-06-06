@@ -77,40 +77,48 @@ struct IntegrationsSettings: View {
     private var portfolioInsightsSection: some View {
         SettingsSectionCard(
             title: "Portfolio AI insights",
-            footer: "Uses Groq’s free tier (llama-3.3-70b). Your key stays in the macOS Keychain. News comes from Yahoo Finance RSS — no extra key needed."
+            footer: PortfolioInsightsManager.shared.usesBuiltInAI
+                ? "Built-in AI is included for you and your friends — no setup needed. News comes from Yahoo Finance RSS."
+                : "Add an optional Groq API key below, or ask the app owner to enable the shared insights service."
         ) {
             Defaults.Toggle(key: .enablePortfolioInsights) {
                 Text("Enable AI portfolio insights")
             }
 
-            SecureField("Groq API key", text: $groqAPIKey)
-                .textFieldStyle(.roundedBorder)
+            if PortfolioInsightsManager.shared.usesBuiltInAI {
+                Label("Built-in AI active", systemImage: "sparkles")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
 
-            HStack(spacing: 10) {
-                Button("Save API key") {
-                    do {
-                        try PortfolioInsightsManager.shared.saveAPIKey(groqAPIKey)
-                        statusMessage = "Groq API key saved."
-                    } catch {
-                        statusMessage = error.localizedDescription
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+            DisclosureGroup("Advanced: use your own Groq key") {
+                SecureField("Groq API key (optional)", text: $groqAPIKey)
+                    .textFieldStyle(.roundedBorder)
 
-                if PortfolioInsightsManager.shared.hasAPIKey {
-                    Button("Remove key", role: .destructive) {
-                        PortfolioInsightsManager.shared.clearAPIKey()
-                        groqAPIKey = ""
-                        statusMessage = "Groq API key removed."
+                HStack(spacing: 10) {
+                    Button("Save API key") {
+                        do {
+                            try PortfolioInsightsManager.shared.saveAPIKey(groqAPIKey)
+                            statusMessage = "Groq API key saved."
+                        } catch {
+                            statusMessage = error.localizedDescription
+                        }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                }
 
-                Link("Get free key", destination: URL(string: "https://console.groq.com/keys")!)
-                    .font(.caption)
+                    if PortfolioInsightsManager.shared.hasAPIKey {
+                        Button("Remove key", role: .destructive) {
+                            PortfolioInsightsManager.shared.clearAPIKey()
+                            groqAPIKey = ""
+                            statusMessage = "Groq API key removed."
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
             }
+            .font(.caption)
         }
     }
 

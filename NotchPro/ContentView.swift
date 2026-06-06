@@ -89,7 +89,7 @@ struct ContentView: View {
                     ),
                     lineWidth: 1
                 )
-                .shadow(color: glowColors.first?.opacity(0.22) ?? .clear, radius: 6)
+                .shadow(color: glowColors.first?.opacity(0.12) ?? .clear, radius: 3)
         } else if vm.notchState == .open && glassmorphismEnabled {
             currentNotchShape
                 .stroke(
@@ -201,17 +201,11 @@ struct ContentView: View {
                         view.background(Color.clear)
                     }
                     .overlay { notchShellBorderOverlay }
-                    .overlay(alignment: .top) {
-                        Rectangle()
-                            .fill(.black)
-                            .frame(height: 1)
-                            .padding(.horizontal, topCornerRadius)
-                    }
                     .shadow(
                         color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
-                            ? .black.opacity(vm.notchState == .open ? 0.38 : 0.55) : .clear,
-                        radius: vm.notchState == .open ? 18 : (Defaults[.cornerRadiusScaling] ? 10 : 6),
-                        y: vm.notchState == .open ? 10 : 4
+                            ? .black.opacity(vm.notchState == .open ? 0.22 : 0.45) : .clear,
+                        radius: vm.notchState == .open ? 8 : (Defaults[.cornerRadiusScaling] ? 8 : 5),
+                        y: vm.notchState == .open ? 4 : 3
                     )
                     .padding(
                         .bottom,
@@ -370,8 +364,8 @@ struct ContentView: View {
 
     @ViewBuilder
     func NotchLayout() -> some View {
-        VStack(alignment: .leading) {
-            VStack(alignment: .leading) {
+        VStack(alignment: .center) {
+            VStack(alignment: .center) {
                 if coordinator.helloAnimationRunning {
                     Spacer()
                     HelloAnimation(onFinish: {

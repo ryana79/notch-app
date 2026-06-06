@@ -20,6 +20,11 @@ source "$ENV_FILE"
 /usr/libexec/PlistBuddy -c "Set :SchwabClientSecret '${SCHWAB_CLIENT_SECRET:-}'" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :SchwabTokenProxyURL '${SCHWAB_TOKEN_PROXY_URL:-}'" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :BrokerProxyAPIKey '${NOTCHPRO_BROKER_PROXY_KEY:-}'" "$PLIST"
+if /usr/libexec/PlistBuddy -c "Print :PortfolioInsightsProxyURL" "$PLIST" &>/dev/null; then
+  /usr/libexec/PlistBuddy -c "Set :PortfolioInsightsProxyURL 'https://broker-proxy.vercel.app/api/portfolio/insights'" "$PLIST"
+else
+  /usr/libexec/PlistBuddy -c "Add :PortfolioInsightsProxyURL string 'https://broker-proxy.vercel.app/api/portfolio/insights'" "$PLIST"
+fi
 /usr/libexec/PlistBuddy -c "Set :WebullAppKey '${WEBULL_APP_KEY:-}'" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :WebullAppSecret '${WEBULL_APP_SECRET:-}'" "$PLIST"
 

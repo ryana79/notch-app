@@ -109,7 +109,10 @@ struct PortfolioExpandedView: View {
             }
             .frame(minWidth: 180)
             .contentShape(Rectangle())
-            .onTapGesture { portfolio.isDetailExpanded = true }
+            .onTapGesture {
+                portfolio.isDetailExpanded = true
+                NotificationCenter.default.post(name: Notification.Name.notchLayoutChanged, object: nil)
+            }
         } else if portfolio.isLoading {
             NotchProCard {
                 HStack {
@@ -234,6 +237,7 @@ struct PortfolioDetailPanel: View {
             Button {
                 portfolio.isDetailExpanded = false
                 PortfolioInsightsManager.shared.clear()
+                NotificationCenter.default.post(name: Notification.Name.notchLayoutChanged, object: nil)
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title3)
@@ -317,8 +321,8 @@ struct PortfolioDetailPanel: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
-                } else if !PortfolioInsightsManager.shared.hasAPIKey {
-                    Text("Add a free Groq API key in Settings → Integrations for AI insights.")
+                } else if !PortfolioInsightsManager.shared.canGenerateInsights {
+                    Text("AI insights will appear here once the service is available.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 } else if let error = insights.lastError {

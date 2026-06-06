@@ -57,6 +57,10 @@ if [[ -x "$LSREGISTER" ]]; then
   killall Dock 2>/dev/null || true
 fi
 
+echo ""
+echo "First time opening from a GitHub DMG? If macOS blocks the app:"
+echo "  Right-click NotchPro in Applications → Open → confirm Open once."
+echo ""
 echo "Launching NotchPro..."
 open /Applications/NotchPro.app
 echo "Done — single NotchPro at /Applications/NotchPro.app"

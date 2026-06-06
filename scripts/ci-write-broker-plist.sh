@@ -22,6 +22,10 @@ data["SchwabClientID"] = os.environ.get("SCHWAB_CLIENT_ID", "").strip()
 data["SchwabClientSecret"] = os.environ.get("SCHWAB_CLIENT_SECRET", "").strip()
 data["SchwabTokenProxyURL"] = os.environ.get("SCHWAB_TOKEN_PROXY_URL", "").strip()
 data["BrokerProxyAPIKey"] = os.environ.get("NOTCHPRO_BROKER_PROXY_KEY", "").strip()
+data["PortfolioInsightsProxyURL"] = os.environ.get(
+    "PORTFOLIO_INSIGHTS_PROXY_URL",
+    "https://broker-proxy.vercel.app/api/portfolio/insights",
+).strip()
 data["WebullAppKey"] = os.environ.get("WEBULL_APP_KEY", "").strip()
 data["WebullAppSecret"] = os.environ.get("WEBULL_APP_SECRET", "").strip()
 

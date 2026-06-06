@@ -94,23 +94,14 @@ struct NotchProCard<Content: View>: View {
             .padding(.vertical, 10)
             .background {
                 cardShape
-                    .fill(Color.white.opacity(0.09 + (isHovering ? 0.07 : 0)))
+                    .fill(Color.white.opacity(0.08 + (isHovering ? 0.04 : 0)))
             }
             .overlay {
                 cardShape.strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            accent.opacity(isHovering ? accentOpacity + 0.2 : accentOpacity + 0.08),
-                            Color.white.opacity(isHovering ? 0.14 : 0.07),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.75
+                    accent.opacity(0.22 + (isHovering ? 0.08 : 0)),
+                    lineWidth: 0.5
                 )
             }
-            .scaleEffect(hoverEnabled && isHovering ? 1.015 : 1)
-            .animation(.smooth(duration: 0.22), value: isHovering)
             .onHover { hovering in
                 guard hoverEnabled else { return }
                 isHovering = hovering
@@ -138,7 +129,7 @@ struct NotchProPill<Content: View>: View {
             }
             .overlay {
                 Capsule()
-                    .strokeBorder(tint.opacity(0.28), lineWidth: 0.5)
+                    .strokeBorder(tint.opacity(0.22), lineWidth: 0.5)
             }
     }
 }
