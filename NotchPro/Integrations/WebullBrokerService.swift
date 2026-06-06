@@ -53,15 +53,7 @@ final class WebullBrokerService {
     }
 
     var isConnected: Bool {
-        guard KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) != nil else {
-            return false
-        }
-        if let expiryString = KeychainStore.load(account: BrokerCredentialKey.webullTokenExpiry),
-           let expiry = Double(expiryString),
-           Date(timeIntervalSince1970: expiry) < Date() {
-            return false
-        }
-        return true
+        BrokerConnectionCache.webullConnected
     }
 
     private var appKey: String { BrokerConfig.shared.webullAppKey }
@@ -69,6 +61,7 @@ final class WebullBrokerService {
 
     func disconnect() {
         KeychainStore.deleteAll(accounts: BrokerCredentialKey.webullUserTokens)
+        BrokerConnectionCache.setWebullConnected(false)
     }
 
     func connect(onPendingVerification: (() -> Void)? = nil) async throws {
@@ -264,6 +257,7 @@ final class WebullBrokerService {
 
     private func persistToken(_ token: String, tokenResponse: [String: Any]) throws {
         try KeychainStore.save(token, account: BrokerCredentialKey.webullAccessToken)
+        BrokerConnectionCache.setWebullConnected(true)
         if let expiresMs = tokenResponse["expires"] as? Int {
             let expiry = Date(timeIntervalSince1970: Double(expiresMs) / 1000)
             try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.webullTokenExpiry)

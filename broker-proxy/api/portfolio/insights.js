@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
           { role: "system", content: "You are a helpful portfolio analyst. Be factual and concise." },
           { role: "user", content: prompt },
         ],
-        max_tokens: 350,
+        max_tokens: typeof body.max_tokens === "number" ? body.max_tokens : 350,
         temperature: 0.35,
       }),
     });
