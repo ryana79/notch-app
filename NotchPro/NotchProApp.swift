@@ -22,7 +22,11 @@ struct NotchProApp: App {
 
     init() {
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+            startingUpdater: true,
+            updaterDelegate: AppUpdateManager.shared,
+            userDriverDelegate: nil
+        )
+        AppUpdateManager.shared.bind(updater: updaterController.updater)
 
         SettingsWindowController.shared.setUpdaterController(updaterController)
     }
@@ -35,6 +39,9 @@ struct NotchProApp: App {
                 }
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
+            Button("Check for Updates…") {
+                updaterController.updater.checkForUpdates()
+            }
             Divider()
             Button("Restart NotchPro") {
                 ApplicationRelauncher.restart()
