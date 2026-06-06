@@ -18,8 +18,10 @@ final class PortfolioInsightsManager: ObservableObject {
     static let shared = PortfolioInsightsManager()
 
     @Published private(set) var insight: String?
+    @Published private(set) var chatAnswer: String?
     @Published private(set) var headlines: [PortfolioNewsHeadline] = []
     @Published private(set) var isGenerating = false
+    @Published private(set) var isAnswering = false
     @Published private(set) var lastError: String?
 
     private let session: URLSession
@@ -70,9 +72,44 @@ final class PortfolioInsightsManager: ObservableObject {
 
     func clear() {
         insight = nil
+        chatAnswer = nil
         headlines = []
         lastError = nil
         isGenerating = false
+        isAnswering = false
+    }
+
+    func ask(question: String, snapshot: PortfolioSnapshot) async {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard Defaults[.enablePortfolioInsights] else { return }
+
+        if headlines.isEmpty {
+            let symbols = Array(Set(snapshot.holdings.map(\.symbol))).sorted().prefix(6)
+            headlines = await fetchNews(symbols: Array(symbols))
+        }
+
+        isAnswering = true
+        lastError = nil
+        defer { isAnswering = false }
+
+        let prompt = buildQAPrompt(question: trimmed, snapshot: snapshot)
+        if let answer = await complete(prompt: prompt, maxTokens: 450) {
+            chatAnswer = answer
+        } else if insight == nil {
+            chatAnswer = "Couldn't reach the AI service. Try again in a moment."
+        }
+    }
+
+    private func buildQAPrompt(question: String, snapshot: PortfolioSnapshot) -> String {
+        let context = buildPrompt(snapshot: snapshot)
+        return """
+        \(context)
+
+        User question: \(question)
+
+        Answer the user's question using only the portfolio data and headlines above. Be direct and concise (under 150 words).
+        """
     }
 
     private func fetchNews(symbols: [String]) async -> [PortfolioNewsHeadline] {
@@ -166,21 +203,28 @@ final class PortfolioInsightsManager: ObservableObject {
         defer { isGenerating = false }
 
         let prompt = buildPrompt(snapshot: snapshot)
-
-        if BrokerConfig.shared.isInsightsProxyConfigured,
-           let proxyURL = BrokerConfig.shared.portfolioInsightsProxyURL {
-            if await generateViaProxy(prompt: prompt, url: proxyURL) {
-                return
-            }
-        }
-
-        if hasAPIKey, let apiKey = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) {
-            await generateViaGroq(prompt: prompt, apiKey: apiKey)
-            if insight != nil { return }
+        if let answer = await complete(prompt: prompt, maxTokens: 350) {
+            insight = answer
+            return
         }
 
         insight = generateLocalFallback(snapshot: snapshot)
         lastError = nil
+    }
+
+    private func complete(prompt: String, maxTokens: Int) async -> String? {
+        if BrokerConfig.shared.isInsightsProxyConfigured,
+           let proxyURL = BrokerConfig.shared.portfolioInsightsProxyURL,
+           let answer = await fetchCompletion(prompt: prompt, maxTokens: maxTokens, proxyURL: proxyURL) {
+            return answer
+        }
+
+        if hasAPIKey, let apiKey = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey),
+           let answer = await fetchCompletion(prompt: prompt, maxTokens: maxTokens, apiKey: apiKey) {
+            return answer
+        }
+
+        return nil
     }
 
     private func generateLocalFallback(snapshot: PortfolioSnapshot) -> String {
@@ -206,36 +250,26 @@ final class PortfolioInsightsManager: ObservableObject {
         return lines.joined(separator: "\n")
     }
 
-    private func generateViaProxy(prompt: String, url: URL) async -> Bool {
-        var request = URLRequest(url: url)
+    private func fetchCompletion(prompt: String, maxTokens: Int, proxyURL: URL) async -> String? {
+        var request = URLRequest(url: proxyURL)
         request.httpMethod = "POST"
         request.setValue(BrokerConfig.shared.brokerProxyAPIKey, forHTTPHeaderField: "x-notchpro-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: ["prompt": prompt])
+        request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "prompt": prompt,
+            "max_tokens": maxTokens,
+        ])
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                lastError = "Could not reach insights service."
-                return false
-            }
-            guard (200...299).contains(http.statusCode) else {
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let error = json["error"] as? String {
-                    lastError = error
-                } else {
-                    lastError = "Insights service unavailable (HTTP \(http.statusCode))."
-                }
-                return false
-            }
-            return parseGroqResponse(data)
+            return try parseCompletionResponse(data: data, response: response)
         } catch {
             lastError = error.localizedDescription
-            return false
+            return nil
         }
     }
 
-    private func generateViaGroq(prompt: String, apiKey: String) async {
+    private func fetchCompletion(prompt: String, maxTokens: Int, apiKey: String) async -> String? {
         var request = URLRequest(url: groqEndpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -246,43 +280,46 @@ final class PortfolioInsightsManager: ObservableObject {
                 ["role": "system", "content": "You are a helpful portfolio analyst. Be factual and concise."],
                 ["role": "user", "content": prompt],
             ],
-            "max_tokens": 350,
+            "max_tokens": maxTokens,
             "temperature": 0.35,
         ])
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                lastError = "Could not reach Groq."
-                return
-            }
-            guard (200...299).contains(http.statusCode) else {
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let error = json["error"] as? [String: Any],
-                   let message = error["message"] as? String {
-                    lastError = message
-                } else {
-                    lastError = "Groq request failed (HTTP \(http.statusCode))."
-                }
-                return
-            }
-            _ = parseGroqResponse(data)
+            return try parseCompletionResponse(data: data, response: response)
         } catch {
             lastError = error.localizedDescription
+            return nil
         }
     }
 
-    private func parseGroqResponse(_ data: Data) -> Bool {
+    private func parseCompletionResponse(data: Data, response: URLResponse) throws -> String? {
+        guard let http = response as? HTTPURLResponse else {
+            lastError = "Could not reach insights service."
+            return nil
+        }
+        guard (200...299).contains(http.statusCode) else {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let error = json["error"] as? String {
+                lastError = error
+            } else if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let error = json["error"] as? [String: Any],
+                      let message = error["message"] as? String {
+                lastError = message
+            } else {
+                lastError = "Insights service unavailable (HTTP \(http.statusCode))."
+            }
+            return nil
+        }
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = json["choices"] as? [[String: Any]],
               let first = choices.first,
               let message = first["message"] as? [String: Any],
               let content = message["content"] as? String else {
             lastError = "Unexpected AI response."
-            return false
+            return nil
         }
-        insight = content.trimmingCharacters(in: .whitespacesAndNewlines)
         lastError = nil
-        return true
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
