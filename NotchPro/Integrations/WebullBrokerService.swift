@@ -10,6 +10,8 @@ enum WebullBrokerError: LocalizedError {
     case notConfigured
     case missingToken
     case awaitingVerification
+    case smsExpired
+    case sessionExpired
     case invalidResponse
     case apiError(String)
 
@@ -21,9 +23,16 @@ enum WebullBrokerError: LocalizedError {
             return "Tap Connect Webull to link your account."
         case .awaitingVerification:
             return "Check the Webull app and enter the SMS code to finish connecting."
+        case .smsExpired:
+            return "SMS code expired. Tap Connect Webull again for a new code."
+        case .sessionExpired:
+            return "Webull session expired. Tap Connect Webull to sign in again."
         case .invalidResponse:
             return "Unexpected response from Webull."
         case .apiError(let message):
+            if message.lowercased().contains("unauthorized") {
+                return "Webull session expired. Tap Connect Webull to sign in again."
+            }
             return message
         }
     }
@@ -44,7 +53,15 @@ final class WebullBrokerService {
     }
 
     var isConnected: Bool {
-        KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) != nil
+        guard KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) != nil else {
+            return false
+        }
+        if let expiryString = KeychainStore.load(account: BrokerCredentialKey.webullTokenExpiry),
+           let expiry = Double(expiryString),
+           Date(timeIntervalSince1970: expiry) < Date() {
+            return false
+        }
+        return true
     }
 
     private var appKey: String { BrokerConfig.shared.webullAppKey }
@@ -56,6 +73,8 @@ final class WebullBrokerService {
 
     func connect(onPendingVerification: (() -> Void)? = nil) async throws {
         guard BrokerConfig.shared.isWebullConfigured else { throw WebullBrokerError.notConfigured }
+
+        disconnect()
 
         let tokenResponse = try await createToken(appKey: appKey, appSecret: appSecret)
         let status = (tokenResponse["status"] as? String) ?? ""
@@ -158,12 +177,15 @@ final class WebullBrokerService {
     }
 
     private func pollUntilVerified(appKey: String, appSecret: String, pendingToken: String) async throws {
+        var activePendingToken = pendingToken
+        var smsRetries = 0
+
         for _ in 0..<60 {
             try await Task.sleep(for: .seconds(5))
             let statusResponse = try await checkToken(
                 appKey: appKey,
                 appSecret: appSecret,
-                token: pendingToken
+                token: activePendingToken
             )
             let status = (statusResponse["status"] as? String) ?? ""
             if status.uppercased() == "NORMAL", let token = statusResponse["token"] as? String {
@@ -171,7 +193,19 @@ final class WebullBrokerService {
                 return
             }
             if status.uppercased() == "EXPIRED" || status.uppercased() == "INVALID" {
-                throw WebullBrokerError.awaitingVerification
+                guard smsRetries < 2 else { throw WebullBrokerError.smsExpired }
+                smsRetries += 1
+                let fresh = try await createToken(appKey: appKey, appSecret: appSecret)
+                let freshStatus = (fresh["status"] as? String) ?? ""
+                if freshStatus.uppercased() == "NORMAL", let token = fresh["token"] as? String {
+                    try persistToken(token, tokenResponse: fresh)
+                    return
+                }
+                if freshStatus.uppercased() == "PENDING", let newPending = fresh["token"] as? String {
+                    activePendingToken = newPending
+                    continue
+                }
+                throw WebullBrokerError.smsExpired
             }
         }
         throw WebullBrokerError.awaitingVerification
@@ -387,6 +421,10 @@ final class WebullBrokerService {
     private func validateHTTP(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw WebullBrokerError.invalidResponse }
         guard (200...299).contains(http.statusCode) else {
+            if http.statusCode == 401 {
+                disconnect()
+                throw WebullBrokerError.sessionExpired
+            }
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 if let message = json["message"] as? String {
                     throw WebullBrokerError.apiError(message)

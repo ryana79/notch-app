@@ -87,3 +87,7 @@ enum BrokerCredentialKey {
         webullAccessToken, webullTokenExpiry, webullAccountID,
     ]
 }
+
+enum IntegrationCredentialKey {
+    static let groqAPIKey = "integrations.groqAPIKey"
+}

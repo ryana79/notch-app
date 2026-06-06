@@ -84,26 +84,31 @@ struct NotchProCard<Content: View>: View {
     @ViewBuilder var content: () -> Content
     @State private var isHovering = false
 
+    private var cardShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: NotchProDesign.cardRadius, style: .continuous)
+    }
+
     var body: some View {
         content()
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background {
-                ZStack {
-                    NotchProDesign.cardBackground(
-                        opacity: 0.09,
-                        hoverBoost: isHovering ? 0.07 : 0
-                    )
-                    RoundedRectangle(cornerRadius: NotchProDesign.cardRadius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(isHovering ? 0.14 : 0.08), lineWidth: 0.5)
-                    NotchProDesign.cardBorder(
-                        accent: accent,
-                        opacity: isHovering ? accentOpacity + 0.14 : accentOpacity,
-                        lineWidth: isHovering ? 1.25 : 1
-                    )
-                }
+                cardShape
+                    .fill(Color.white.opacity(0.09 + (isHovering ? 0.07 : 0)))
             }
-            .clipShape(RoundedRectangle(cornerRadius: NotchProDesign.cardRadius, style: .continuous))
+            .overlay {
+                cardShape.strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            accent.opacity(isHovering ? accentOpacity + 0.2 : accentOpacity + 0.08),
+                            Color.white.opacity(isHovering ? 0.14 : 0.07),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.75
+                )
+            }
             .scaleEffect(hoverEnabled && isHovering ? 1.015 : 1)
             .animation(.smooth(duration: 0.22), value: isHovering)
             .onHover { hovering in
@@ -121,25 +126,20 @@ struct NotchProPill<Content: View>: View {
         content()
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(
-                LinearGradient(
-                    colors: [tint.opacity(0.16), tint.opacity(0.08)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay {
+            .background {
                 Capsule()
-                    .strokeBorder(
+                    .fill(
                         LinearGradient(
-                            colors: [tint.opacity(0.42), tint.opacity(0.18), Color.white.opacity(0.12)],
+                            colors: [tint.opacity(0.16), tint.opacity(0.08)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 0.75
+                        )
                     )
             }
-            .clipShape(Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(tint.opacity(0.28), lineWidth: 0.5)
+            }
     }
 }
 

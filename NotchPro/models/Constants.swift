@@ -153,6 +153,7 @@ extension Defaults.Keys {
     static let enableTouchBar = Key<Bool>("enableTouchBar", default: true)
     static let showSystemStats = Key<Bool>("showSystemStats", default: false)
     static let showPortfolioGlance = Key<Bool>("showPortfolioGlance", default: true)
+    static let enablePortfolioInsights = Key<Bool>("enablePortfolioInsights", default: true)
     static let showFocusTimer = Key<Bool>("showFocusTimer", default: false)
     static let showWorkoutGlance = Key<Bool>("showWorkoutGlance", default: true)
     static let focusTimerDurationMinutes = Key<Int>("focusTimerDurationMinutes", default: 25)
