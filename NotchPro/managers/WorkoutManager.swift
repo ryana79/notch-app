@@ -37,12 +37,20 @@ struct WorkoutSession: Identifiable, Codable, Equatable {
     let id: UUID
     var startedAt: Date
     var endedAt: Date?
+    var muscleGroups: String
     var sets: [WorkoutSet]
 
-    init(id: UUID = UUID(), startedAt: Date = .now, endedAt: Date? = nil, sets: [WorkoutSet] = []) {
+    init(
+        id: UUID = UUID(),
+        startedAt: Date = .now,
+        endedAt: Date? = nil,
+        muscleGroups: String = "",
+        sets: [WorkoutSet] = []
+    ) {
         self.id = id
         self.startedAt = startedAt
         self.endedAt = endedAt
+        self.muscleGroups = muscleGroups
         self.sets = sets
     }
 
@@ -105,8 +113,12 @@ final class WorkoutManager: ObservableObject {
     @Published private(set) var activeSession: WorkoutSession?
     @Published private(set) var history: [WorkoutSession] = []
     @Published var draftExercise: GymExercise = .benchPress
+    @Published var draftMuscleGroups: String = ""
+    @Published var draftExerciseName: String = GymExercise.benchPress.rawValue
     @Published var draftWeight: Double = 135
     @Published var draftReps: Int = 8
+    @Published var draftWeightText: String = "135"
+    @Published var draftRepsText: String = "8"
 
     private let historyKey = "notchpro.workout.history.v1"
     private let activeKey = "notchpro.workout.active.v1"
@@ -149,7 +161,7 @@ final class WorkoutManager: ObservableObject {
 
     func startWorkout() {
         guard activeSession == nil else { return }
-        activeSession = WorkoutSession()
+        activeSession = WorkoutSession(muscleGroups: draftMuscleGroups.trimmingCharacters(in: .whitespacesAndNewlines))
         schedulePersistActiveSession()
     }
 
@@ -171,11 +183,12 @@ final class WorkoutManager: ObservableObject {
         }
         guard var session = activeSession, session.isActive else { return }
 
-        let parsedWeight = weight ?? draftWeight
-        let parsedReps = reps ?? draftReps
+        let parsedWeight = weight ?? parsedDraftWeight()
+        let parsedReps = reps ?? parsedDraftReps()
         guard parsedWeight > 0, parsedReps > 0 else { return }
 
-        let name = (exercise ?? draftExercise).rawValue
+        let name = exerciseNameForAdd(exercise)
+        session.muscleGroups = draftMuscleGroups.trimmingCharacters(in: .whitespacesAndNewlines)
         session.sets.append(
             WorkoutSet(exerciseName: name, weight: parsedWeight, reps: parsedReps)
         )
@@ -206,21 +219,76 @@ final class WorkoutManager: ObservableObject {
 
     func selectExercise(_ exercise: GymExercise) {
         draftExercise = exercise
+        draftExerciseName = exercise.rawValue
         applySuggestedDraft(for: exercise)
+    }
+
+    func syncDraftTextFields() {
+        draftWeightText = formatWorkoutWeight(draftWeight)
+        draftRepsText = "\(draftReps)"
+    }
+
+    func applyDraftWeightFromText() {
+        let trimmed = draftWeightText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let value = Double(trimmed.replacingOccurrences(of: ",", with: ".")) else { return }
+        setDraftWeight(value)
+        draftWeightText = formatWorkoutWeight(draftWeight)
+    }
+
+    func applyDraftRepsFromText() {
+        let trimmed = draftRepsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let value = Int(trimmed) else { return }
+        draftReps = max(1, min(99, value))
+        draftRepsText = "\(draftReps)"
+        schedulePersistActiveSession()
+    }
+
+    func updateMuscleGroups(_ value: String) {
+        draftMuscleGroups = value
+        if var session = activeSession, session.isActive {
+            session.muscleGroups = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            activeSession = session
+            schedulePersistActiveSession()
+        }
+    }
+
+    private func parsedDraftWeight() -> Double {
+        let trimmed = draftWeightText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let value = Double(trimmed.replacingOccurrences(of: ",", with: ".")) {
+            return max(0, (value * 10).rounded() / 10)
+        }
+        return draftWeight
+    }
+
+    private func parsedDraftReps() -> Int {
+        let trimmed = draftRepsText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let value = Int(trimmed) {
+            return max(1, min(99, value))
+        }
+        return draftReps
+    }
+
+    private func exerciseNameForAdd(_ exercise: GymExercise?) -> String {
+        let custom = draftExerciseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty { return custom }
+        return (exercise ?? draftExercise).rawValue
     }
 
     func setDraftWeight(_ weight: Double) {
         draftWeight = max(0, (weight * 10).rounded() / 10)
+        draftWeightText = formatWorkoutWeight(draftWeight)
         schedulePersistActiveSession()
     }
 
     func adjustDraftWeight(by delta: Double) {
         draftWeight = max(0, (draftWeight + delta * 10).rounded() / 10)
+        draftWeightText = formatWorkoutWeight(draftWeight)
         schedulePersistActiveSession()
     }
 
     func adjustDraftReps(by delta: Int) {
         draftReps = max(1, min(99, draftReps + delta))
+        draftRepsText = "\(draftReps)"
         schedulePersistActiveSession()
     }
 
@@ -322,6 +390,7 @@ final class WorkoutManager: ObservableObject {
         if let recent = lastLoggedSet(for: exercise.rawValue) {
             draftWeight = recent.weight
             draftReps = recent.reps
+            syncDraftTextFields()
         }
     }
 
@@ -343,11 +412,15 @@ final class WorkoutManager: ObservableObject {
               session.isActive
         else { return }
         activeSession = session
-        if let last = session.sets.last,
-           let exercise = GymExercise(rawValue: last.exerciseName) {
-            draftExercise = exercise
+        draftMuscleGroups = session.muscleGroups
+        if let last = session.sets.last {
+            draftExerciseName = last.exerciseName
+            if let exercise = GymExercise(rawValue: last.exerciseName) {
+                draftExercise = exercise
+            }
             draftWeight = last.weight
             draftReps = last.reps
+            syncDraftTextFields()
         }
     }
 

@@ -41,7 +41,7 @@ class NotchProWindow: NSPanel {
     }
     
     override var canBecomeKey: Bool {
-        false
+        NotchProCoordinator.shared.isNotchTextInputActive
     }
     
     override var canBecomeMain: Bool {
