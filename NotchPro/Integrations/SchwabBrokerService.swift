@@ -79,13 +79,14 @@ final class SchwabBrokerService {
     }
 
     var isConnected: Bool {
-        KeychainStore.load(account: BrokerCredentialKey.schwabRefreshToken) != nil
+        BrokerConnectionCache.schwabConnected
     }
 
     func disconnect() {
         callbackServer?.stop()
         callbackServer = nil
         KeychainStore.deleteAll(accounts: BrokerCredentialKey.schwabUserTokens)
+        BrokerConnectionCache.setSchwabConnected(false)
     }
 
     func connect() async throws {
@@ -253,6 +254,7 @@ final class SchwabBrokerService {
         let expiresIn = (json["expires_in"] as? Double) ?? (json["expires_in"] as? Int).map(Double.init) ?? 1800
         let expiry = Date().addingTimeInterval(expiresIn)
         try KeychainStore.save(String(expiry.timeIntervalSince1970), account: BrokerCredentialKey.schwabTokenExpiry)
+        BrokerConnectionCache.setSchwabConnected(true)
     }
 
     private func fetchAccountHashes(accessToken: String) async throws -> [String] {

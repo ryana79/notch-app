@@ -30,13 +30,15 @@ enum KeychainStore {
     }
 
     static func load(account: String) -> String? {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+        // Never prompt for the login keychain password on background reads.
+        query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)

@@ -313,8 +313,7 @@ struct ContentView: View {
                         }
                     }
                 if vm.chinHeight > 0 {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.01))
+                    Color.clear
                         .frame(width: computedChinWidth, height: vm.chinHeight)
                 }
             }
