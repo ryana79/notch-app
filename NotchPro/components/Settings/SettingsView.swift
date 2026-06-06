@@ -17,6 +17,7 @@ import SwiftUIIntrospect
 struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
     @State private var accentColorUpdateTrigger = UUID()
+    @ObservedObject private var appUpdates = AppUpdateManager.shared
 
     let updaterController: SPUStandardUpdaterController?
 
@@ -46,30 +47,40 @@ struct SettingsView: View {
             .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 260)
         } detail: {
-            Group {
-                switch selectedTab {
-                case .general:
-                    GeneralSettings()
-                case .media:
-                    Media()
-                case .productivity:
-                    ProductivitySettings()
-                case .integrations:
-                    IntegrationsSettings()
-                case .features:
-                    MoreFeaturesSettings()
-                case .about:
-                    if let controller = updaterController {
-                        About(updaterController: controller)
-                    } else {
-                        About(
-                            updaterController: SPUStandardUpdaterController(
-                                startingUpdater: true, updaterDelegate: nil,
-                                userDriverDelegate: nil))
+            VStack(spacing: 0) {
+                if let controller = updaterController {
+                    SettingsUpdateBanner(updater: controller.updater)
+                    if appUpdates.updateAvailable {
+                        Divider()
                     }
                 }
+                Group {
+                    switch selectedTab {
+                    case .general:
+                        GeneralSettings()
+                    case .media:
+                        Media()
+                    case .productivity:
+                        ProductivitySettings()
+                    case .integrations:
+                        IntegrationsSettings()
+                    case .features:
+                        MoreFeaturesSettings()
+                    case .about:
+                        if let controller = updaterController {
+                            About(updaterController: controller)
+                        } else {
+                            About(
+                                updaterController: SPUStandardUpdaterController(
+                                    startingUpdater: true,
+                                    updaterDelegate: AppUpdateManager.shared,
+                                    userDriverDelegate: nil
+                                ))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
         }
         .navigationSplitViewStyle(.balanced)
@@ -943,6 +954,7 @@ func lighterColor(from nsColor: NSColor, amount: CGFloat = 0.14) -> Color {
 
 struct About: View {
     @State private var showBuildNumber: Bool = false
+    @ObservedObject private var appUpdates = AppUpdateManager.shared
     let updaterController: SPUStandardUpdaterController
     @Environment(\.openWindow) var openWindow
     var body: some View {
@@ -970,8 +982,25 @@ struct About: View {
                             showBuildNumber.toggle()
                         }
                     }
+                    if appUpdates.updateAvailable, let latest = appUpdates.latestVersion {
+                        HStack {
+                            Text("Status")
+                            Spacer()
+                            Label("v\(latest) available", systemImage: "arrow.down.circle.fill")
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 } header: {
                     Text("Version info")
+                }
+
+                Section {
+                    UpdaterSettingsView(updater: updaterController.updater)
+                    CheckForUpdatesView(updater: updaterController.updater)
+                } header: {
+                    Text("Software updates")
+                } footer: {
+                    Text("NotchPro checks GitHub for new releases automatically. If an update is available, a banner appears at the top of Settings.")
                 }
 
                 Section {
@@ -996,8 +1025,6 @@ struct About: View {
                     .buttonStyle(PlainButtonStyle())
                 } header: {
                     Text("Source")
-                } footer: {
-                    Text("NotchPro is an independent fork. No auto-updates from third-party servers.")
                 }
             }
             VStack(spacing: 0) {

@@ -28,6 +28,10 @@
 	<array>
 		<dict/>
 	</array>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/ryana79/notch-app/main/updater/appcast.xml</string>
 	<key>SUPublicEDKey</key>
