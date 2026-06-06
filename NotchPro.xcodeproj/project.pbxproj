@@ -162,6 +162,8 @@
 		B1NSTR012E70000100000014 /* NotchStatusRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1NSTR012E70000100000014 /* NotchStatusRail.swift */; };
 		B1PORT012E70000100000001 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000001 /* KeychainStore.swift */; };
 		B1PORT012E70000100000014 /* BrokerConnectionCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000014 /* BrokerConnectionCache.swift */; };
+		B1PORT012E70000100000015 /* BrokerTokenCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000015 /* BrokerTokenCache.swift */; };
+		B1NPRD012E70000100000015 /* NotchTextInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1NPRD012E70000100000015 /* NotchTextInput.swift */; };
 		B1PORT012E70000100000002 /* OAuthCallbackServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000002 /* OAuthCallbackServer.swift */; };
 		B1PORT012E70000100000003 /* SchwabBrokerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000003 /* SchwabBrokerService.swift */; };
 		B1PORT012E70000100000004 /* WebullBrokerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000004 /* WebullBrokerService.swift */; };
@@ -361,6 +363,8 @@
 		A1NSTR012E70000100000014 /* NotchStatusRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchStatusRail.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000001 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000014 /* BrokerConnectionCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerConnectionCache.swift; sourceTree = "<group>"; };
+		A1PORT012E70000100000015 /* BrokerTokenCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTokenCache.swift; sourceTree = "<group>"; };
+		A1NPRD012E70000100000015 /* NotchTextInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchTextInput.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000002 /* OAuthCallbackServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthCallbackServer.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000003 /* SchwabBrokerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchwabBrokerService.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000004 /* WebullBrokerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebullBrokerService.swift; sourceTree = "<group>"; };
@@ -529,6 +533,7 @@
 				5955950C2E900ED800C66711 /* ApplicationRelauncher.swift */,
 				A1SEC012E70000100000006 /* SecureClipboardFilter.swift */,
 				A1NPRD012E70000100000011 /* NotchProDesign.swift */,
+				A1NPRD012E70000100000015 /* NotchTextInput.swift */,
 				14288E0B2C6F8EC000B9F80C /* AppIcons.swift */,
 			);
 			path = helpers;
@@ -539,6 +544,7 @@
 			children = (
 				A1PORT012E70000100000001 /* KeychainStore.swift */,
 				A1PORT012E70000100000014 /* BrokerConnectionCache.swift */,
+				A1PORT012E70000100000015 /* BrokerTokenCache.swift */,
 			);
 			path = Security;
 			sourceTree = "<group>";
@@ -1197,6 +1203,8 @@
 				B1NSTR012E70000100000014 /* NotchStatusRail.swift in Sources */,
 				B1PORT012E70000100000001 /* KeychainStore.swift in Sources */,
 				B1PORT012E70000100000014 /* BrokerConnectionCache.swift in Sources */,
+				B1PORT012E70000100000015 /* BrokerTokenCache.swift in Sources */,
+				B1NPRD012E70000100000015 /* NotchTextInput.swift in Sources */,
 				B1PORT012E70000100000002 /* OAuthCallbackServer.swift in Sources */,
 				B1PORT012E70000100000003 /* SchwabBrokerService.swift in Sources */,
 				B1PORT012E70000100000004 /* WebullBrokerService.swift in Sources */,
@@ -1435,7 +1443,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NotchPro/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
@@ -1464,7 +1472,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.0.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro;
 				PRODUCT_NAME = NotchPro;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1491,7 +1499,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NotchPro/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
@@ -1519,7 +1527,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.0.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro;
 				PRODUCT_NAME = NotchPro;
 				PROVISIONING_PROFILE_SPECIFIER = "";

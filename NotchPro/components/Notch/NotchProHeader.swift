@@ -85,63 +85,7 @@ struct NotchProHeader: View {
                             OpenNotchHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon)
                                 .transition(.scale(scale: 0.8).combined(with: .opacity))
                         } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 4) {
-                                    if Defaults[.showMirror] {
-                                        Button(action: {
-                                            vm.toggleCameraPreview()
-                                        }) {
-                                            Capsule()
-                                                .fill(.black)
-                                                .frame(width: 30, height: 30)
-                                                .overlay {
-                                                    Image(systemName: "web.camera")
-                                                        .foregroundColor(.white)
-                                                        .padding()
-                                                        .imageScale(.medium)
-                                                }
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                    if Defaults[.settingsIconInNotch] {
-                                        Button(action: {
-                                            DispatchQueue.main.async {
-                                                SettingsWindowController.shared.showWindow()
-                                            }
-
-                                        }) {
-                                            Capsule()
-                                                .fill(.black)
-                                                .frame(width: 30, height: 30)
-                                                .overlay {
-                                                    Image(systemName: "gear")
-                                                        .foregroundColor(.white)
-                                                        .padding()
-                                                        .imageScale(.medium)
-                                                }
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                    if Defaults[.showBatteryIndicator] {
-                                        NotchProBatteryView(
-                                            batteryWidth: 30,
-                                            isCharging: batteryModel.isCharging,
-                                            isInLowPowerMode: batteryModel.isInLowPowerMode,
-                                            isPluggedIn: batteryModel.isPluggedIn,
-                                            levelBattery: batteryModel.levelBattery,
-                                            maxCapacity: batteryModel.maxCapacity,
-                                            timeToFullCharge: batteryModel.timeToFullCharge,
-                                            isForNotification: false
-                                        )
-                                    }
-                                    WeatherGlanceView()
-                                    PortfolioGlanceView()
-                                    WorkoutGlanceView()
-                                    NotchCalendarGlance()
-                                    FocusTimerGlance()
-                                    SystemStatsGlance()
-                                }
-                            }
+                            openNotchToolbar
 
                             Button {
                                 ApplicationRelauncher.quitCompletely()
@@ -171,6 +115,49 @@ struct NotchProHeader: View {
         }
         .foregroundColor(.gray)
         .environmentObject(vm)
+    }
+
+    @ViewBuilder
+    private var openNotchToolbar: some View {
+        HStack(spacing: 4) {
+            if Defaults[.showMirror] {
+                toolbarIconButton(systemName: "web.camera") {
+                    vm.toggleCameraPreview()
+                }
+            }
+            if Defaults[.settingsIconInNotch] {
+                toolbarIconButton(systemName: "gear") {
+                    SettingsWindowController.shared.showWindow()
+                }
+            }
+            if Defaults[.showBatteryIndicator] {
+                NotchProBatteryView(
+                    batteryWidth: 30,
+                    isCharging: batteryModel.isCharging,
+                    isInLowPowerMode: batteryModel.isInLowPowerMode,
+                    isPluggedIn: batteryModel.isPluggedIn,
+                    levelBattery: batteryModel.levelBattery,
+                    maxCapacity: batteryModel.maxCapacity,
+                    timeToFullCharge: batteryModel.timeToFullCharge,
+                    isForNotification: false
+                )
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func toolbarIconButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Capsule()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 30, height: 30)
+                .overlay {
+                    Image(systemName: systemName)
+                        .foregroundColor(.white)
+                        .imageScale(.medium)
+                }
+        }
+        .buttonStyle(.plain)
     }
 
     func isHUDType(_ type: SneakContentType) -> Bool {
