@@ -39,15 +39,21 @@ final class PortfolioManager: ObservableObject {
             stop()
             return
         }
-        updateConnectionStates()
+        applyConnectionStatesFromCache()
         if hasAnyConnection {
-            resumeRefreshTimer()
+            scheduleRefreshTimer(deferImmediateRefresh: true)
         }
+    }
+
+    func refreshIfNeededOnNotchOpen() {
+        guard Defaults[.showPortfolioGlance], hasAnyConnection else { return }
+        guard snapshot == nil, !isLoading else { return }
+        Task { await refresh() }
     }
 
     func enableGlanceAndRefresh() {
         Defaults[.showPortfolioGlance] = true
-        updateConnectionStates()
+        refreshConnectionStatesFromKeychain()
         resumeRefreshTimer()
     }
 
@@ -62,8 +68,12 @@ final class PortfolioManager: ObservableObject {
     }
 
     func resumeRefreshTimer() {
+        scheduleRefreshTimer(deferImmediateRefresh: snapshot != nil)
+    }
+
+    private func scheduleRefreshTimer(deferImmediateRefresh: Bool) {
         guard Defaults[.showPortfolioGlance], !isRefreshScheduled else { return }
-        updateConnectionStates()
+        applyConnectionStatesFromCache()
         isRefreshScheduled = true
         refreshTimer?.invalidate()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
@@ -71,11 +81,21 @@ final class PortfolioManager: ObservableObject {
                 await self?.refresh()
             }
         }
-        Task { await refresh() }
+        if !deferImmediateRefresh {
+            Task { await refresh() }
+        }
     }
 
     func updateConnectionStates() {
+        applyConnectionStatesFromCache()
+    }
+
+    func refreshConnectionStatesFromKeychain() {
         reconcileBrokerConnectionCache()
+        applyConnectionStatesFromCache()
+    }
+
+    private func applyConnectionStatesFromCache() {
         schwabState = SchwabBrokerService.shared.isConnected ? .connected : .disconnected
         webullState = WebullBrokerService.shared.isConnected ? .connected : .disconnected
     }

@@ -632,6 +632,10 @@ struct ContentView: View {
     }
 
     private func doOpen() {
+        if !coordinator.openLastTabByDefault {
+            coordinator.currentView = .home
+        }
+        PortfolioManager.shared.refreshIfNeededOnNotchOpen()
         withAnimation(animationSpring) {
             vm.open()
         }
@@ -681,6 +685,7 @@ struct ContentView: View {
                     if self.vm.notchState == .open,
                        !self.vm.isBatteryPopoverActive,
                        !self.vm.isScrollInteractionActive,
+                       !PortfolioManager.shared.isDetailExpanded,
                        !SharingStateManager.shared.preventNotchClose {
                         withAnimation(self.closeSpring) {
                             self.vm.close()

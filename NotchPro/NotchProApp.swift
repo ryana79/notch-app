@@ -341,6 +341,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             forName: Notification.Name.notchLayoutChanged, object: nil, queue: nil
         ) { [weak self] _ in
             Task { @MainActor in
+                self?.syncOpenNotchSize()
                 self?.adjustWindowPosition()
                 self?.setupDragDetectors()
             }
@@ -548,6 +549,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func syncOpenNotchSize() {
+        if Defaults[.showOnAllDisplays] {
+            for viewModel in viewModels.values where viewModel.notchState == .open {
+                viewModel.notchSize = getOpenNotchSize()
+            }
+        } else if vm.notchState == .open {
+            vm.notchSize = getOpenNotchSize()
+        }
+    }
+
     @objc func adjustWindowPosition(changeAlpha: Bool = false) {
         if Defaults[.showOnAllDisplays] {
             let currentScreenUUIDs = Set(NSScreen.screens.compactMap { $0.displayUUID })
@@ -600,7 +611,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             vm.screenUUID = selectedScreen.displayUUID
-            vm.notchSize = getClosedNotchSize(screenUUID: selectedScreen.displayUUID)
+            if vm.notchState == .open {
+                vm.notchSize = getOpenNotchSize()
+            } else {
+                vm.notchSize = getClosedNotchSize(screenUUID: selectedScreen.displayUUID)
+            }
 
             if window == nil {
                 window = createNotchProWindow(for: selectedScreen, with: vm)
