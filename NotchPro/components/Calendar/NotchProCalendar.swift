@@ -202,14 +202,18 @@ struct CalendarView: View {
                         WheelPicker(selectedDate: $selectedDate, config: Config())
                         HStack(alignment: .top) {
                             LinearGradient(
-                                colors: [Color.black, .clear], startPoint: .leading, endPoint: .trailing
+                                colors: [Color.white.opacity(0.08), .clear],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .frame(width: 20)
+                            .frame(width: 16)
                             Spacer()
                             LinearGradient(
-                                colors: [.clear, Color.black], startPoint: .leading, endPoint: .trailing
+                                colors: [.clear, Color.white.opacity(0.08)],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .frame(width: 20)
+                            .frame(width: 16)
                         }
                     }
                 }
@@ -219,13 +223,13 @@ struct CalendarView: View {
                 )
                 if filteredEvents.isEmpty {
                     EmptyEventsView(selectedDate: selectedDate)
-                    Spacer(minLength: 0)
+                        .frame(maxHeight: .infinity, alignment: .center)
                 } else {
                     EventListView(events: calendarManager.events)
                 }
             }
         }
-        .frame(height: 155)
+        .frame(minHeight: 140, maxHeight: 155)
         .onChange(of: selectedDate) {
             Task {
                 await calendarManager.updateCurrentDate(selectedDate)

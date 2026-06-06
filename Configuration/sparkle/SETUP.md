@@ -29,14 +29,16 @@ The `Deploy static content to Pages` workflow publishes `updater/appcast.xml` to
 
 ### 3. Optional signing secrets (smoother installs)
 
-For notarized/signed DMGs (fewer Gatekeeper warnings), add:
+For signed/notarized DMGs (no Gatekeeper warnings), add:
 
-- `BUILD_CERTIFICATE_BASE64`
+- `BUILD_CERTIFICATE_BASE64` — Developer ID Application `.p12`
 - `P12_PASSWORD`
 - `KEYCHAIN_PASSWORD`
+- `APPLE_ID` — Apple ID email used for notarization
+- `APPLE_APP_SPECIFIC_PASSWORD` — app-specific password from appleid.apple.com
 - `DEVELOPMENT_TEAM_ID` (repository variable)
 
-Without these, CI builds with ad-hoc signing (friends use Right-click → Open once).
+Without these, CI builds with ad-hoc signing (first open: Right-click → Open once).
 
 ## Publishing a release
 

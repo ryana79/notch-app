@@ -79,15 +79,6 @@ struct NotchProHeader: View {
                 .blur(radius: vm.notchState == .closed ? 20 : 0)
                 .zIndex(2)
 
-                if vm.notchState == .open {
-                    Rectangle()
-                        .fill(NSScreen.screen(withUUID: coordinator.selectedScreenUUID)?.safeAreaInsets.top ?? 0 > 0 ? .black : .clear)
-                        .frame(width: vm.closedNotchSize.width)
-                        .mask {
-                            NotchShape()
-                        }
-                }
-
                 HStack(spacing: 4) {
                     if vm.notchState == .open {
                         if isHUDType(coordinator.sneakPeek.type) && coordinator.sneakPeek.show && Defaults[.showOpenNotchHUD] {

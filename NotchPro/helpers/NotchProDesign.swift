@@ -49,9 +49,9 @@ struct NotchGlassPanelBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.14),
-                            Color.white.opacity(0.04),
-                            Color.black.opacity(0.28),
+                            Color.white.opacity(0.12),
+                            Color.white.opacity(0.05),
+                            Color.white.opacity(0.02),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing

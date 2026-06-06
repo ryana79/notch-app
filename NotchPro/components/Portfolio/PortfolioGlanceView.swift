@@ -198,6 +198,7 @@ struct PortfolioDetailPanel: View {
     @ObservedObject private var portfolio = PortfolioManager.shared
     @ObservedObject private var insights = PortfolioInsightsManager.shared
     @Default(.enablePortfolioInsights) private var enablePortfolioInsights
+    @State private var question = ""
 
     var body: some View {
         if let snapshot = portfolio.snapshot {
@@ -207,6 +208,7 @@ struct PortfolioDetailPanel: View {
                     holdingsSection(snapshot)
                     newsSection
                     insightsSection
+                    askSection(snapshot)
                     footer(snapshot)
                 }
             }
@@ -325,12 +327,72 @@ struct PortfolioDetailPanel: View {
                     Text("AI insights will appear here once the service is available.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
-                } else if let error = insights.lastError {
+                } else if let error = insights.lastError, insights.chatAnswer == nil {
                     Text(error)
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func askSection(_ snapshot: PortfolioSnapshot) -> some View {
+        if enablePortfolioInsights, insights.canGenerateInsights {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ask AI")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    TextField("Ask about your portfolio or news…", text: $question)
+                        .textFieldStyle(.plain)
+                        .font(.caption2)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white.opacity(0.06))
+                        )
+                        .onSubmit { submitQuestion(snapshot) }
+                    Button {
+                        submitQuestion(snapshot)
+                    } label: {
+                        Group {
+                            if insights.isAnswering {
+                                ProgressView().controlSize(.mini)
+                            } else {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.title3)
+                            }
+                        }
+                        .frame(width: 22, height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .disabled(
+                        question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || insights.isAnswering
+                    )
+                }
+                if insights.isAnswering, insights.chatAnswer == nil {
+                    Text("Thinking…")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                } else if let answer = insights.chatAnswer {
+                    Text(answer)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func submitQuestion(_ snapshot: PortfolioSnapshot) {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        Task {
+            await insights.ask(question: trimmed, snapshot: snapshot)
         }
     }
 

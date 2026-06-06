@@ -75,8 +75,22 @@ final class PortfolioManager: ObservableObject {
     }
 
     func updateConnectionStates() {
+        reconcileBrokerConnectionCache()
         schwabState = SchwabBrokerService.shared.isConnected ? .connected : .disconnected
         webullState = WebullBrokerService.shared.isConnected ? .connected : .disconnected
+    }
+
+    private func reconcileBrokerConnectionCache() {
+        if KeychainStore.load(account: BrokerCredentialKey.schwabRefreshToken) != nil {
+            BrokerConnectionCache.setSchwabConnected(true)
+        } else if BrokerConnectionCache.schwabConnected {
+            BrokerConnectionCache.setSchwabConnected(false)
+        }
+        if KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) != nil {
+            BrokerConnectionCache.setWebullConnected(true)
+        } else if BrokerConnectionCache.webullConnected {
+            BrokerConnectionCache.setWebullConnected(false)
+        }
     }
 
     func connectSchwab() async {

@@ -30,7 +30,13 @@ fi
 echo "Installing from: $APP"
 rm -rf /Applications/NotchPro.app
 ditto "$APP" /Applications/NotchPro.app
-codesign --force --deep --sign - /Applications/NotchPro.app
+# Local Release builds are ad-hoc; only re-sign when needed so we don't break a valid DMG signature.
+if codesign --verify --deep --strict /Applications/NotchPro.app 2>/dev/null; then
+  echo "App signature verified — keeping existing signature."
+else
+  echo "Re-signing ad-hoc for local build..."
+  codesign --force --deep --sign - /Applications/NotchPro.app
+fi
 xattr -cr /Applications/NotchPro.app
 
 # DerivedData .app copies make Spotlight/Launchpad show duplicate icons — remove after install
