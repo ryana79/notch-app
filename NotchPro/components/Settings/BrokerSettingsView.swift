@@ -8,9 +8,11 @@ import SwiftUI
 
 struct IntegrationsSettings: View {
     @Default(.showPortfolioGlance) var showPortfolioGlance
+    @Default(.enablePortfolioInsights) var enablePortfolioInsights
     @ObservedObject private var portfolio = PortfolioManager.shared
 
     @State private var schwabManualURL = ""
+    @State private var groqAPIKey = ""
     @State private var statusMessage: String?
 
     private let config = BrokerConfig.shared
@@ -51,6 +53,7 @@ struct IntegrationsSettings: View {
 
                     schwabSection
                     webullSection
+                    portfolioInsightsSection
 
                     if let statusMessage {
                         Text(statusMessage)
@@ -67,6 +70,47 @@ struct IntegrationsSettings: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             portfolio.updateConnectionStates()
+            groqAPIKey = KeychainStore.load(account: IntegrationCredentialKey.groqAPIKey) ?? ""
+        }
+    }
+
+    private var portfolioInsightsSection: some View {
+        SettingsSectionCard(
+            title: "Portfolio AI insights",
+            footer: "Uses Groq’s free tier (llama-3.3-70b). Your key stays in the macOS Keychain. News comes from Yahoo Finance RSS — no extra key needed."
+        ) {
+            Defaults.Toggle(key: .enablePortfolioInsights) {
+                Text("Enable AI portfolio insights")
+            }
+
+            SecureField("Groq API key", text: $groqAPIKey)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 10) {
+                Button("Save API key") {
+                    do {
+                        try PortfolioInsightsManager.shared.saveAPIKey(groqAPIKey)
+                        statusMessage = "Groq API key saved."
+                    } catch {
+                        statusMessage = error.localizedDescription
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                if PortfolioInsightsManager.shared.hasAPIKey {
+                    Button("Remove key", role: .destructive) {
+                        PortfolioInsightsManager.shared.clearAPIKey()
+                        groqAPIKey = ""
+                        statusMessage = "Groq API key removed."
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                Link("Get free key", destination: URL(string: "https://console.groq.com/keys")!)
+                    .font(.caption)
+            }
         }
     }
 
@@ -124,7 +168,7 @@ struct IntegrationsSettings: View {
         SettingsSectionCard(
             title: "Webull",
             footer: config.isWebullConfigured
-                ? "Approve the SMS code in Webull → Menu → Messages → OpenAPI Notifications."
+                ? "Approve the SMS code in Webull → Menu → Messages → OpenAPI Notifications. Codes expire in about 5 minutes — tap Connect again if yours expired."
                 : nil
         ) {
             brokerHeader(

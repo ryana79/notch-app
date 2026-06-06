@@ -16,6 +16,7 @@ final class PortfolioManager: ObservableObject {
     @Published private(set) var lastError: String?
     @Published private(set) var schwabState: BrokerConnectionState = .disconnected
     @Published private(set) var webullState: BrokerConnectionState = .disconnected
+    @Published var isDetailExpanded = false
 
     private var refreshTimer: Timer?
     private var isRefreshScheduled = false
@@ -123,8 +124,12 @@ final class PortfolioManager: ObservableObject {
             webullState = .connected
             enableGlanceAndRefresh()
         } catch {
-            if case WebullBrokerError.awaitingVerification = error {
+            if case WebullBrokerError.smsExpired = error {
+                webullState = .awaitingVerification(error.localizedDescription ?? "SMS code expired. Tap Connect Webull again.")
+            } else if case WebullBrokerError.awaitingVerification = error {
                 webullState = .awaitingVerification("Open Webull → Menu → Messages → OpenAPI Notifications and enter the SMS code.")
+            } else if case WebullBrokerError.sessionExpired = error {
+                webullState = .error(error.localizedDescription ?? "Webull session expired.")
             } else {
                 webullState = .error(error.localizedDescription)
             }
@@ -174,7 +179,12 @@ final class PortfolioManager: ObservableObject {
                 connected.append(.webull)
                 webullState = .connected
             } catch {
-                webullState = .error(error.localizedDescription)
+                if case WebullBrokerError.sessionExpired = error {
+                    WebullBrokerService.shared.disconnect()
+                    webullState = .disconnected
+                } else {
+                    webullState = .error(error.localizedDescription)
+                }
                 lastError = error.localizedDescription
             }
         }
@@ -182,13 +192,18 @@ final class PortfolioManager: ObservableObject {
         let totalValue = allHoldings.reduce(0) { $0 + $1.marketValue }
         let totalDay = allHoldings.compactMap(\.dayChange).reduce(0, +)
 
-        snapshot = PortfolioSnapshot(
+        let newSnapshot = PortfolioSnapshot(
             totalMarketValue: totalValue,
             totalDayChange: totalDay,
             holdings: allHoldings.sorted { $0.marketValue > $1.marketValue },
             lastUpdated: Date(),
             brokersConnected: connected
         )
+        snapshot = newSnapshot
+
+        if isDetailExpanded, !newSnapshot.holdings.isEmpty {
+            await PortfolioInsightsManager.shared.refresh(snapshot: newSnapshot)
+        }
     }
 
     private var refreshInterval: TimeInterval {

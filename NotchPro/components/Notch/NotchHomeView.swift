@@ -485,6 +485,7 @@ struct NotchHomeView: View {
     @ObservedObject var webcamManager = WebcamManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = NotchProCoordinator.shared
+    @ObservedObject private var portfolioManager = PortfolioManager.shared
     let albumArtNamespace: Namespace.ID
 
     var body: some View {
@@ -530,6 +531,7 @@ struct NotchHomeView: View {
     }
 
     private var infoColumnWidth: CGFloat {
+        if portfolioManager.isDetailExpanded { return 300 }
         if Defaults[.showWorkoutGlance] { return 220 }
         if Defaults[.showCalendar] || Defaults[.showPortfolioGlance] { return 200 }
         return 160
