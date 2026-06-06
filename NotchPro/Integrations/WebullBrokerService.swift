@@ -172,7 +172,7 @@ final class WebullBrokerService {
             appKey: appKey,
             appSecret: appSecret
         )
-        try validateHTTP(response: response, data: data)
+        try validateTokenHTTP(response: response, data: data)
         return try parseJSONObject(data)
     }
 
@@ -221,7 +221,7 @@ final class WebullBrokerService {
             appKey: appKey,
             appSecret: appSecret
         )
-        try validateHTTP(response: response, data: data)
+        try validateTokenHTTP(response: response, data: data)
         return try parseJSONObject(data)
     }
 
@@ -249,7 +249,6 @@ final class WebullBrokerService {
         var request = URLRequest(url: URL(string: "https://\(host)\(path)")!)
         request.httpMethod = method
         request.setValue(appKey, forHTTPHeaderField: "x-app-key")
-        request.setValue(appSecret, forHTTPHeaderField: "x-app-secret")
         request.setValue(timestamp, forHTTPHeaderField: "x-timestamp")
         request.setValue(signature, forHTTPHeaderField: "x-signature")
         request.setValue("HMAC-SHA1", forHTTPHeaderField: "x-signature-algorithm")
@@ -416,6 +415,25 @@ final class WebullBrokerService {
         formatter.formatOptions = [.withInternetDateTime]
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter.string(from: Date())
+    }
+
+    private func validateTokenHTTP(response: URLResponse, data: Data) throws {
+        guard let http = response as? HTTPURLResponse else { throw WebullBrokerError.invalidResponse }
+        guard (200...299).contains(http.statusCode) else {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let message = json["message"] as? String {
+                    throw WebullBrokerError.apiError(message)
+                }
+                if let code = json["error_code"] as? String {
+                    throw WebullBrokerError.apiError(code.replacingOccurrences(of: "_", with: " ").capitalized)
+                }
+            }
+            if http.statusCode == 401 {
+                throw WebullBrokerError.apiError("Webull rejected the app credentials. Check App Key and Secret in this build.")
+            }
+            let message = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
+            throw WebullBrokerError.apiError(message)
+        }
     }
 
     private func validateHTTP(response: URLResponse, data: Data) throws {

@@ -40,7 +40,13 @@ let openNotchSize: CGSize = .init(width: 640, height: 265)
         height = max(height, 255)
     }
 
-    return .init(width: 680, height: height)
+    var width: CGFloat = 680
+    if PortfolioManager.shared.isDetailExpanded {
+        width = 720
+        height = max(height, 380)
+    }
+
+    return .init(width: width, height: height)
 }
 
 @MainActor func getWindowSize() -> CGSize {

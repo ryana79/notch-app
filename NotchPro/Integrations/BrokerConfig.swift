@@ -16,8 +16,13 @@ struct BrokerConfig {
     let schwabClientSecret: String
     let schwabTokenProxyURL: URL?
     let brokerProxyAPIKey: String
+    let portfolioInsightsProxyURL: URL?
     let webullAppKey: String
     let webullAppSecret: String
+
+    var isInsightsProxyConfigured: Bool {
+        portfolioInsightsProxyURL != nil && !brokerProxyAPIKey.isEmpty
+    }
 
     var isSchwabConfigured: Bool {
         !schwabClientID.isEmpty && (!schwabClientSecret.isEmpty || schwabTokenProxyURL != nil)
@@ -40,17 +45,25 @@ struct BrokerConfig {
 
         if let proxy = (plist["SchwabTokenProxyURL"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
            !proxy.isEmpty {
-            let normalized = Self.normalizeProxyURL(proxy)
-            schwabTokenProxyURL = URL(string: normalized)
+            schwabTokenProxyURL = URL(string: Self.normalizeBrokerProxyURL(proxy, fallbackPath: "/api/schwab/token"))
         } else {
             schwabTokenProxyURL = nil
+        }
+
+        if let insights = (plist["PortfolioInsightsProxyURL"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !insights.isEmpty {
+            portfolioInsightsProxyURL = URL(string: Self.normalizeBrokerProxyURL(insights, fallbackPath: "/api/portfolio/insights"))
+        } else if !brokerProxyAPIKey.isEmpty {
+            portfolioInsightsProxyURL = URL(string: "https://broker-proxy.vercel.app/api/portfolio/insights")
+        } else {
+            portfolioInsightsProxyURL = nil
         }
     }
 
     /// Deployment preview URLs on Vercel require login; always use the stable production alias.
-    private static func normalizeProxyURL(_ raw: String) -> String {
-        if raw.contains("-ryana79s-projects.vercel.app") {
-            return "https://broker-proxy.vercel.app/api/schwab/token"
+    private static func normalizeBrokerProxyURL(_ raw: String, fallbackPath: String) -> String {
+        if raw.contains("-ryana79s-projects.vercel.app") || raw.contains("broker-proxy.vercel.app") {
+            return "https://broker-proxy.vercel.app\(fallbackPath)"
         }
         return raw
     }

@@ -24,7 +24,6 @@ final class PortfolioManager: ObservableObject {
     private static let portfolioGlanceMigrationKey = "didMigratePortfolioGlance1.0.4"
 
     private init() {
-        updateConnectionStates()
         if hasAnyConnection, !UserDefaults.standard.bool(forKey: Self.portfolioGlanceMigrationKey) {
             Defaults[.showPortfolioGlance] = true
             UserDefaults.standard.set(true, forKey: Self.portfolioGlanceMigrationKey)

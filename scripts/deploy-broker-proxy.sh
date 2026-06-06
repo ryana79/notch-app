@@ -50,6 +50,13 @@ set_env SCHWAB_CLIENT_ID "$SCHWAB_CLIENT_ID"
 set_env SCHWAB_CLIENT_SECRET "$SCHWAB_CLIENT_SECRET"
 set_env NOTCHPRO_BROKER_PROXY_KEY "$NOTCHPRO_BROKER_PROXY_KEY"
 
+if [[ -n "${GROQ_API_KEY:-}" ]]; then
+  set_env GROQ_API_KEY "$GROQ_API_KEY"
+  echo "GROQ_API_KEY set — portfolio AI insights enabled on proxy."
+else
+  echo "Tip: add GROQ_API_KEY to .broker-secrets.env for built-in portfolio AI insights."
+fi
+
 echo "Redeploying with env vars..."
 vercel deploy --prod --yes 2>&1 | tee /tmp/notchpro-vercel-deploy.log
 DEPLOY_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.vercel\.app' /tmp/notchpro-vercel-deploy.log | tail -1)"

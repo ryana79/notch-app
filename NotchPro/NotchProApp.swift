@@ -272,11 +272,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let screenFrame = screen.frame
-        window.setFrameOrigin(
-            NSPoint(
-                x: screenFrame.origin.x + (screenFrame.width / 2) - window.frame.width / 2,
-                y: screenFrame.origin.y + screenFrame.height - window.frame.height
-            ))
+        let size = getWindowSize()
+        window.setFrame(
+            NSRect(
+                x: screenFrame.midX - size.width / 2,
+                y: screenFrame.maxY - size.height,
+                width: size.width,
+                height: size.height
+            ),
+            display: true
+        )
         window.alphaValue = 1
     }
 
@@ -318,6 +323,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         NotificationCenter.default.addObserver(
             forName: Notification.Name.notchHeightChanged, object: nil, queue: nil
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.adjustWindowPosition()
+                self?.setupDragDetectors()
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name.notchLayoutChanged, object: nil, queue: nil
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.adjustWindowPosition()
@@ -656,6 +670,7 @@ extension Notification.Name {
     static let showOnAllDisplaysChanged = Notification.Name("showOnAllDisplaysChanged")
     static let automaticallySwitchDisplayChanged = Notification.Name("automaticallySwitchDisplayChanged")
     static let expandedDragDetectionChanged = Notification.Name("expandedDragDetectionChanged")
+    static let notchLayoutChanged = Notification.Name("notchLayoutChanged")
 }
 
 extension CGRect: @retroactive Hashable {

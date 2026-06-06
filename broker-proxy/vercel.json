@@ -1,6 +1,7 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/api/schwab/token", "dest": "/api/schwab/token.js" }
+    { "src": "/api/schwab/token", "dest": "/api/schwab/token.js" },
+    { "src": "/api/portfolio/insights", "dest": "/api/portfolio/insights.js" }
   ]
 }
