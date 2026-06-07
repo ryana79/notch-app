@@ -121,6 +121,13 @@ class NotchProCoordinator: ObservableObject {
             preferredScreenUUID = NSScreen.preferredNotchScreen?.displayUUID
         }
         
+        if let preferredUUID = preferredScreenUUID,
+           NSScreen.screen(withUUID: preferredUUID) == nil,
+           let builtIn = NSScreen.builtInNotchedScreen?.displayUUID {
+            preferredScreenUUID = builtIn
+            NSLog("⚠️ Reset stale display preference to built-in panel")
+        }
+
         selectedScreenUUID = preferredScreenUUID ?? NSScreen.preferredNotchScreen?.displayUUID ?? ""
         // Observe changes to accessibility authorization and react accordingly
         accessibilityObserver = NotificationCenter.default.addObserver(

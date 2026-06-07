@@ -16,6 +16,7 @@ import SwiftUIIntrospect
 
 struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
+    @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @State private var accentColorUpdateTrigger = UUID()
     @ObservedObject private var appUpdates = AppUpdateManager.shared
 
@@ -26,15 +27,18 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             VStack(spacing: 0) {
                 SettingsSidebarHeader()
                 Divider().opacity(0.35)
-                List(selection: $selectedTab) {
+                List {
                     ForEach(SettingsTab.allCases) { tab in
-                        NavigationLink(value: tab) {
+                        Button {
+                            selectedTab = tab
+                        } label: {
                             SettingsSidebarRow(tab: tab, isSelected: selectedTab == tab)
                         }
+                        .buttonStyle(.plain)
                         .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
@@ -45,7 +49,7 @@ struct SettingsView: View {
             }
             .background(Color(nsColor: .underPageBackgroundColor))
             .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 260)
+            .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
         } detail: {
             VStack(spacing: 0) {
                 if let controller = updaterController {
@@ -1970,6 +1974,9 @@ struct SettingsSidebarRow: View {
                 .foregroundStyle(isSelected ? Color.effectiveAccent : .secondary)
             Text(tab.rawValue)
                 .font(.body.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.88))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)

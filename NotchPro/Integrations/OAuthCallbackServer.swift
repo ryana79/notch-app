@@ -11,7 +11,6 @@ import Security
 final class OAuthCallbackServer {
     static let redirectURI = "https://127.0.0.1:8765"
     static let port: UInt16 = 8765
-    private static let p12Passphrase = "notchpro-local"
     private static let keychainTag = "com.notchpro.oauth.localhost"
 
     private var listener: NWListener?
@@ -65,7 +64,8 @@ final class OAuthCallbackServer {
 
         let tlsOptions = NWProtocolTLS.Options()
         guard let secIdentity = sec_identity_create(identity) else {
-            throw OAuthCallbackError.missingCertificate
+            NSLog("OAuthCallbackServer: sec_identity_create failed after certificate import")
+            throw OAuthCallbackError.identityUnavailable
         }
         sec_protocol_options_set_local_identity(
             tlsOptions.securityProtocolOptions,
@@ -160,30 +160,39 @@ final class OAuthCallbackServer {
     }
 
     private func loadLocalhostIdentity() throws -> SecIdentity {
-        if let identity = try loadIdentityFromP12() {
-            return identity
+        let sources: [(String, () throws -> SecIdentity?)] = [
+            ("embedded", { try self.importP12(OAuthLocalhostCertificate.p12Data, passphrase: OAuthLocalhostCertificate.passphrase) }),
+            ("bundle-p12", { [self] in
+                guard let url = Self.bundleResourceURL(name: "localhost", ext: "p12") else { return nil }
+                return try self.importP12(Data(contentsOf: url), passphrase: OAuthLocalhostCertificate.passphrase)
+            }),
+            ("bundle-pem", { try self.loadIdentityFromPEM() }),
+        ]
+
+        for (label, loader) in sources {
+            if let identity = try loader() {
+                NSLog("OAuthCallbackServer: loaded TLS identity from \(label)")
+                return identity
+            }
         }
-        if let identity = try loadIdentityFromPEM() {
-            return identity
-        }
-        let resourcePaths = Bundle.main.resourcePath.map { try? FileManager.default.subpathsOfDirectory(atPath: $0) } ?? nil
-        NSLog("OAuthCallbackServer: certificate not found. Bundle resources: \(resourcePaths?.prefix(20) ?? [])")
+
+        NSLog("OAuthCallbackServer: no TLS identity source succeeded")
         throw OAuthCallbackError.missingCertificate
     }
 
-    private func loadIdentityFromP12() throws -> SecIdentity? {
-        guard let url = Self.bundleResourceURL(name: "localhost", ext: "p12") else {
-            return nil
-        }
+    private func importP12(_ data: Data, passphrase: String) throws -> SecIdentity? {
+        guard !data.isEmpty else { return nil }
 
-        let p12Data = try Data(contentsOf: url)
-        let options: [String: Any] = [kSecImportExportPassphrase as String: Self.p12Passphrase]
+        let options: [String: Any] = [
+            kSecImportExportPassphrase as String: passphrase,
+            kSecImportExportKeychain as String: kCFNull as Any,
+        ]
         var items: CFArray?
-        let status = SecPKCS12Import(p12Data as CFData, options as CFDictionary, &items)
+        let status = SecPKCS12Import(data as CFData, options as CFDictionary, &items)
         guard status == errSecSuccess,
               let array = items as? [[String: Any]],
               let identity = array.first?[kSecImportItemIdentity as String] as! SecIdentity? else {
-            NSLog("OAuthCallbackServer: PKCS12 import failed (status \(status)) at \(url.path)")
+            NSLog("OAuthCallbackServer: PKCS12 import failed (status \(status))")
             return nil
         }
         return identity
@@ -275,13 +284,16 @@ final class OAuthCallbackServer {
 
 enum OAuthCallbackError: LocalizedError {
     case missingCertificate
+    case identityUnavailable
     case invalidPort
     case timedOut
 
     var errorDescription: String? {
         switch self {
         case .missingCertificate:
-            return "OAuth certificate missing from app bundle. Reinstall the latest NotchPro, or paste the redirect URL manually in Settings → Integrations."
+            return "Could not load the Schwab OAuth certificate. Quit and reopen NotchPro, or paste the redirect URL manually in Settings → Integrations."
+        case .identityUnavailable:
+            return "Could not start the local Schwab login server. Paste the redirect URL manually in Settings → Integrations."
         case .invalidPort:
             return "Could not open local OAuth port 8765. Quit other apps using that port and try again."
         case .timedOut:

@@ -50,12 +50,22 @@ struct NotchScreenLayout {
         return 185
     }
 
-    /// Horizontal center of the physical notch — more accurate than frame.midX on some MacBooks.
+    /// Horizontal center of the physical notch on this display.
     var notchCenterX: CGFloat {
+        // Apple Silicon MacBooks always center the camera notch on the built-in panel.
+        if hasPhysicalNotch {
+            return frame.midX
+        }
         if hasAuxiliaryInsets {
             return frame.minX + leftInset + physicalNotchWidth / 2
         }
         return frame.midX
+    }
+
+    /// Top inset so open content clears the camera notch and menu bar.
+    var openContentTopInset: CGFloat {
+        guard hasPhysicalNotch else { return windowTopInset }
+        return max(14, menuBarHeight + 2)
     }
 
     var menuBarHeight: CGFloat {
@@ -72,10 +82,10 @@ struct NotchScreenLayout {
 
         if notchState == .open {
             var width = min(open.width, frame.width - 12)
-            let topPadding = hasPhysicalNotch ? min(windowTopInset, 4) : windowTopInset
-            let bottomShadow = hasPhysicalNotch ? min(shadowPadding, 14) : shadowPadding
+            let topPadding = openContentTopInset
+            let bottomShadow = hasPhysicalNotch ? min(shadowPadding, 12) : shadowPadding
             var height = open.height + topPadding + bottomShadow
-            height = min(height, frame.height - 6)
+            height = min(height, frame.height - 8)
             if isDetailExpanded {
                 width = min(max(width, 720), frame.width - 12)
                 height = min(max(height, 380), frame.height - 6)

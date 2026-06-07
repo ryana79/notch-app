@@ -66,7 +66,7 @@ struct ContentView: View {
         guard vm.notchState == .open else { return 0 }
         guard let uuid = vm.screenUUID,
               let screen = NSScreen.screen(withUUID: uuid) else { return windowTopInset }
-        return NotchScreenLayout(screen: screen).hasPhysicalNotch ? min(windowTopInset, 4) : windowTopInset
+        return NotchScreenLayout(screen: screen).openContentTopInset
     }
 
     private var topCornerRadius: CGFloat {
