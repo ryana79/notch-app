@@ -10,16 +10,20 @@ struct NotchStatusRail: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
 
     var body: some View {
-        HStack(spacing: NotchProDesign.compactSpacing) {
-            NotchWeatherPill()
-            NotchPortfolioPill()
-            WorkoutPill()
-            NotchCalendarGlance()
-            FocusTimerGlance()
-            if Defaults[.showBatteryIndicator] {
-                batteryPill
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: NotchProDesign.compactSpacing) {
+                NotchWeatherPill()
+                NotchPortfolioPill()
+                WorkoutPill()
+                NotchCalendarGlance()
+                FocusTimerGlance()
+                if Defaults[.showBatteryIndicator] {
+                    batteryPill
+                }
             }
+            .padding(.horizontal, 4)
         }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private var batteryPill: some View {

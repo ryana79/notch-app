@@ -60,7 +60,14 @@ final class OAuthCallbackServer {
     }
 
     private func startListening(onReady: (() -> Void)?) throws {
-        let identity = try loadLocalhostIdentity()
+        let identity: SecIdentity
+        if Thread.isMainThread {
+            identity = try loadLocalhostIdentity()
+        } else {
+            identity = try DispatchQueue.main.sync {
+                try loadLocalhostIdentity()
+            }
+        }
 
         let tlsOptions = NWProtocolTLS.Options()
         guard let secIdentity = sec_identity_create(identity) else {
@@ -91,8 +98,10 @@ final class OAuthCallbackServer {
             case .ready:
                 onReady?()
             case .failed(let error):
-                self?.continuation?.resume(throwing: error)
-                self?.continuation = nil
+                Task { @MainActor in
+                    self?.continuation?.resume(throwing: error)
+                    self?.continuation = nil
+                }
             default:
                 break
             }
@@ -114,9 +123,11 @@ final class OAuthCallbackServer {
 
             if let code = Self.parseAuthorizationCode(from: path) {
                 self.sendSuccess(connection: connection)
-                self.continuation?.resume(returning: code)
-                self.continuation = nil
-                self.stop()
+                Task { @MainActor in
+                    self.continuation?.resume(returning: code)
+                    self.continuation = nil
+                    self.stop()
+                }
             } else {
                 self.sendFailure(connection: connection)
                 connection.cancel()
@@ -161,12 +172,13 @@ final class OAuthCallbackServer {
 
     private func loadLocalhostIdentity() throws -> SecIdentity {
         let sources: [(String, () throws -> SecIdentity?)] = [
-            ("embedded", { try self.importP12(OAuthLocalhostCertificate.p12Data, passphrase: OAuthLocalhostCertificate.passphrase) }),
+            ("embedded-pem", { try self.loadIdentityFromEmbeddedPEM() }),
+            ("bundle-pem", { try self.loadIdentityFromPEM() }),
+            ("embedded-p12", { try self.importP12(OAuthLocalhostCertificate.p12Data, passphrase: OAuthLocalhostCertificate.passphrase) }),
             ("bundle-p12", { [self] in
                 guard let url = Self.bundleResourceURL(name: "localhost", ext: "p12") else { return nil }
                 return try self.importP12(Data(contentsOf: url), passphrase: OAuthLocalhostCertificate.passphrase)
             }),
-            ("bundle-pem", { try self.loadIdentityFromPEM() }),
         ]
 
         for (label, loader) in sources {
@@ -180,22 +192,15 @@ final class OAuthCallbackServer {
         throw OAuthCallbackError.missingCertificate
     }
 
-    private func importP12(_ data: Data, passphrase: String) throws -> SecIdentity? {
-        guard !data.isEmpty else { return nil }
-
-        let options: [String: Any] = [
-            kSecImportExportPassphrase as String: passphrase,
-            kSecImportExportKeychain as String: kCFNull as Any,
-        ]
-        var items: CFArray?
-        let status = SecPKCS12Import(data as CFData, options as CFDictionary, &items)
-        guard status == errSecSuccess,
-              let array = items as? [[String: Any]],
-              let identity = array.first?[kSecImportItemIdentity as String] as! SecIdentity? else {
-            NSLog("OAuthCallbackServer: PKCS12 import failed (status \(status))")
+    private func loadIdentityFromEmbeddedPEM() throws -> SecIdentity? {
+        guard !OAuthLocalhostCertificate.certPEMData.isEmpty,
+              !OAuthLocalhostCertificate.keyPEMData.isEmpty else {
             return nil
         }
-        return identity
+        return try loadIdentityFromPEMData(
+            certPEMData: OAuthLocalhostCertificate.certPEMData,
+            keyPEMData: OAuthLocalhostCertificate.keyPEMData
+        )
     }
 
     private func loadIdentityFromPEM() throws -> SecIdentity? {
@@ -204,12 +209,22 @@ final class OAuthCallbackServer {
             return nil
         }
 
-        let certData = try Data(contentsOf: certURL)
-        guard let certificate = SecCertificateCreateWithData(nil, certData as CFData) else {
+        return try loadIdentityFromPEMData(
+            certPEMData: Data(contentsOf: certURL),
+            keyPEMData: Data(contentsOf: keyURL)
+        )
+    }
+
+    private func loadIdentityFromPEMData(certPEMData: Data, keyPEMData: Data) throws -> SecIdentity? {
+        let certDER = Self.pemDataToDER(certPEMData)
+        guard let certificate = SecCertificateCreateWithData(nil, certDER as CFData) else {
+            NSLog("OAuthCallbackServer: certificate parse failed")
             return nil
         }
 
-        let keyPEM = try String(contentsOf: keyURL, encoding: .utf8)
+        guard let keyPEM = String(data: keyPEMData, encoding: .utf8) else {
+            return nil
+        }
         let keyDER = Self.pemBodyToDER(keyPEM)
         let keyAttrs: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
@@ -222,6 +237,23 @@ final class OAuthCallbackServer {
         }
 
         return Self.installIdentity(certificate: certificate, privateKey: privateKey)
+    }
+
+    private func importP12(_ data: Data, passphrase: String) throws -> SecIdentity? {
+        guard !data.isEmpty else { return nil }
+
+        let options: [String: Any] = [
+            kSecImportExportPassphrase as String: passphrase,
+        ]
+        var items: CFArray?
+        let status = SecPKCS12Import(data as CFData, options as CFDictionary, &items)
+        guard status == errSecSuccess,
+              let array = items as? [[String: Any]],
+              let identity = array.first?[kSecImportItemIdentity as String] as! SecIdentity? else {
+            NSLog("OAuthCallbackServer: PKCS12 import failed (status \(status))")
+            return nil
+        }
+        return identity
     }
 
     private static func installIdentity(certificate: SecCertificate, privateKey: SecKey) -> SecIdentity? {
@@ -260,6 +292,11 @@ final class OAuthCallbackServer {
             return nil
         }
         return identity
+    }
+
+    private static func pemDataToDER(_ pemData: Data) -> Data {
+        guard let pem = String(data: pemData, encoding: .utf8) else { return pemData }
+        return pemBodyToDER(pem)
     }
 
     private static func pemBodyToDER(_ pem: String) -> Data {

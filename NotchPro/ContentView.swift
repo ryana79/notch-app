@@ -63,10 +63,7 @@ struct ContentView: View {
     private let zeroHeightHoverPadding: CGFloat = 10
 
     private var contentTopInset: CGFloat {
-        guard vm.notchState == .open else { return 0 }
-        guard let uuid = vm.screenUUID,
-              let screen = NSScreen.screen(withUUID: uuid) else { return windowTopInset }
-        return NotchScreenLayout(screen: screen).openContentTopInset
+        vm.notchState == .open ? windowTopInset : 0
     }
 
     private var topCornerRadius: CGFloat {
@@ -151,8 +148,8 @@ struct ContentView: View {
             chinWidth = 640
         } else if closedMusicActive {
             chinWidth = max(chinWidth, 360)
-        } else if closedStatusRailActive && Defaults[.showWeatherGlance] {
-            chinWidth = max(chinWidth, 300)
+        } else if closedStatusRailActive {
+            chinWidth = max(chinWidth, getStatusRailMinWidth(screenUUID: vm.screenUUID))
         } else if !coordinator.expandingView.show && vm.notchState == .closed
             && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace]
             && !vm.hideOnClosed
