@@ -126,7 +126,7 @@ struct IntegrationsSettings: View {
         SettingsSectionCard(
             title: "Charles Schwab",
             footer: config.isSchwabConfigured
-                ? "Sign in with your Schwab account in the browser. Reconnect about once a week."
+                ? "Sign in with your Schwab account in the browser. If the redirect page says connection refused, expand “Paste redirect URL manually” and paste the full https://127.0.0.1:8765/?code=… URL from the address bar."
                 : nil
         ) {
             brokerHeader(
@@ -156,7 +156,7 @@ struct IntegrationsSettings: View {
                         statusMessage = "Schwab disconnected."
                     }
                 }
-                DisclosureGroup("Paste redirect URL manually") {
+                DisclosureGroup("Paste redirect URL manually (if browser shows connection refused)") {
                     TextField("https://127.0.0.1:8765/?code=…", text: $schwabManualURL)
                         .textFieldStyle(.roundedBorder)
                     Button("Complete connection") {

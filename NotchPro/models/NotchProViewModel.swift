@@ -5,6 +5,7 @@
 //  Created by Harsh Vardhan  Goswami  on 04/08/24.
 //
 
+import AppKit
 import Combine
 import Defaults
 import SwiftUI
@@ -182,7 +183,9 @@ class NotchProViewModel: NSObject, ObservableObject {
         if let frame = screenFrame {
             
             let baseY = frame.maxY - notchSize.height
-            let baseX = frame.midX - notchSize.width / 2
+            let centerX = screenUUID.flatMap { NSScreen.screen(withUUID: $0) }
+                .map { NotchScreenLayout(screen: $0).notchCenterX } ?? frame.midX
+            let baseX = centerX - notchSize.width / 2
             
             return position.y >= baseY && position.x >= baseX && position.x <= baseX + notchSize.width
         }
@@ -196,6 +199,7 @@ class NotchProViewModel: NSObject, ObservableObject {
         
         // Force music information update when notch is opened
         MusicManager.shared.forceUpdate()
+        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
     }
 
     func close() {
@@ -216,6 +220,7 @@ class NotchProViewModel: NSObject, ObservableObject {
         } else if !ShelfStateViewModel.shared.isEmpty && Defaults[.openShelfByDefault] {
             coordinator.currentView = .shelf
         }
+        NotificationCenter.default.post(name: Notification.Name.notchHeightChanged, object: nil)
     }
 
     func closeHello() {

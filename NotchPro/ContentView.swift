@@ -6,6 +6,7 @@
 //  Modified by Richard Kunkli on 24/08/2024.
 //
 
+import AppKit
 import AVFoundation
 import Combine
 import Defaults
@@ -60,6 +61,13 @@ struct ContentView: View {
 
     private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
+
+    private var contentTopInset: CGFloat {
+        guard vm.notchState == .open else { return 0 }
+        guard let uuid = vm.screenUUID,
+              let screen = NSScreen.screen(withUUID: uuid) else { return windowTopInset }
+        return NotchScreenLayout(screen: screen).hasPhysicalNotch ? min(windowTopInset, 4) : windowTopInset
+    }
 
     private var topCornerRadius: CGFloat {
        ((vm.notchState == .open) && Defaults[.cornerRadiusScaling])
@@ -318,9 +326,13 @@ struct ContentView: View {
                 }
             }
         }
-        .padding(.top, vm.notchState == .open ? windowTopInset : 0)
+        .padding(.top, contentTopInset)
         .padding(.bottom, 8)
-        .frame(maxWidth: getWindowSize().width, maxHeight: getWindowSize().height, alignment: .top)
+        .frame(
+            maxWidth: getWindowSize(screenUUID: vm.screenUUID, notchState: vm.notchState).width,
+            maxHeight: getWindowSize(screenUUID: vm.screenUUID, notchState: vm.notchState).height,
+            alignment: .top
+        )
         .compositingGroup()
         .scaleEffect(
             x: gestureScale,
@@ -370,7 +382,7 @@ struct ContentView: View {
                     HelloAnimation(onFinish: {
                         vm.closeHello()
                     }).frame(
-                        width: getClosedNotchSize().width,
+                        width: getClosedNotchSize(screenUUID: vm.screenUUID).width,
                         height: 80
                     )
                     .padding(.top, 40)

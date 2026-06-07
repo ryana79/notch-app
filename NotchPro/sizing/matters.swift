@@ -5,6 +5,7 @@
 //  Created by Harsh Vardhan  Goswami  on 05/08/24.
 //
 
+import AppKit
 import Defaults
 import Foundation
 import SwiftUI
@@ -15,6 +16,85 @@ let batterySneakSize: CGSize = .init(width: 160, height: 1)
 let shadowPadding: CGFloat = 24
 /// Extra space above open content so top corner radius isn't clipped at the screen edge.
 let windowTopInset: CGFloat = 8
+
+/// Per-display layout derived from NSScreen auxiliary safe areas (physical notch).
+struct NotchScreenLayout {
+    let screen: NSScreen
+
+    var frame: CGRect { screen.frame }
+
+    var hasPhysicalNotch: Bool {
+        screen.safeAreaInsets.top > 0
+    }
+
+    var leftInset: CGFloat {
+        screen.auxiliaryTopLeftArea?.width ?? 0
+    }
+
+    var rightInset: CGFloat {
+        screen.auxiliaryTopRightArea?.width ?? 0
+    }
+
+    var hasAuxiliaryInsets: Bool {
+        leftInset > 0 && rightInset > 0
+    }
+
+    /// Width of the physical notch cutout in points.
+    var physicalNotchWidth: CGFloat {
+        if hasAuxiliaryInsets {
+            return frame.width - leftInset - rightInset
+        }
+        if hasPhysicalNotch {
+            return min(220, frame.width * 0.128)
+        }
+        return 185
+    }
+
+    /// Horizontal center of the physical notch — more accurate than frame.midX on some MacBooks.
+    var notchCenterX: CGFloat {
+        if hasAuxiliaryInsets {
+            return frame.minX + leftInset + physicalNotchWidth / 2
+        }
+        return frame.midX
+    }
+
+    var menuBarHeight: CGFloat {
+        if hasPhysicalNotch {
+            return max(screen.safeAreaInsets.top, frame.maxY - screen.visibleFrame.maxY)
+        }
+        return frame.maxY - screen.visibleFrame.maxY
+    }
+
+    @MainActor func windowSize(notchState: NotchState, isDetailExpanded: Bool) -> CGSize {
+        let screenUUID = screen.displayUUID
+        let open = getOpenNotchSize()
+        let closed = getClosedNotchSize(screenUUID: screenUUID)
+
+        if notchState == .open {
+            var width = min(open.width, frame.width - 12)
+            let topPadding = hasPhysicalNotch ? min(windowTopInset, 4) : windowTopInset
+            let bottomShadow = hasPhysicalNotch ? min(shadowPadding, 14) : shadowPadding
+            var height = open.height + topPadding + bottomShadow
+            height = min(height, frame.height - 6)
+            if isDetailExpanded {
+                width = min(max(width, 720), frame.width - 12)
+                height = min(max(height, 380), frame.height - 6)
+            }
+            return CGSize(width: width, height: height)
+        }
+
+        let width = min(max(open.width, closed.width + 64), frame.width - 12)
+        let height = min(menuBarHeight + closed.height + 12, frame.height - 6)
+        return CGSize(width: width, height: height)
+    }
+
+    func windowFrame(for size: CGSize) -> CGRect {
+        let centeredX = notchCenterX - size.width / 2
+        let x = min(max(centeredX, frame.minX + 4), frame.maxX - size.width - 4)
+        let y = max(frame.minY, frame.maxY - size.height)
+        return CGRect(x: x, y: y, width: size.width, height: size.height)
+    }
+}
 
 /// Legacy constant; prefer `getOpenNotchSize()` for layout that depends on enabled widgets.
 let openNotchSize: CGSize = .init(width: 640, height: 265)
@@ -49,9 +129,20 @@ let openNotchSize: CGSize = .init(width: 640, height: 265)
     return .init(width: width, height: height)
 }
 
-@MainActor func getWindowSize() -> CGSize {
-    let open = getOpenNotchSize()
-    return .init(width: open.width, height: open.height + shadowPadding + windowTopInset)
+@MainActor func getWindowSize(
+    screenUUID: String? = nil,
+    notchState: NotchState = .open
+) -> CGSize {
+    let screen = screenUUID.flatMap { NSScreen.screen(withUUID: $0) }
+        ?? NSScreen.preferredNotchScreen
+    guard let screen else {
+        let open = getOpenNotchSize()
+        return CGSize(width: open.width, height: open.height + shadowPadding + windowTopInset)
+    }
+    return NotchScreenLayout(screen: screen).windowSize(
+        notchState: notchState,
+        isDetailExpanded: PortfolioManager.shared.isDetailExpanded
+    )
 }
 let cornerRadiusInsets: (opened: (top: CGFloat, bottom: CGFloat), closed: (top: CGFloat, bottom: CGFloat)) = (opened: (top: 22, bottom: 28), closed: (top: 8, bottom: 16))
 
@@ -94,29 +185,21 @@ enum MusicPlayerImageSizes {
         selectedScreen = NSScreen.screen(withUUID: uuid)
     }
 
-    // Check if the screen is available
     if let screen = selectedScreen {
-        // Calculate and set the exact width of the notch
-        if let topLeftNotchpadding: CGFloat = screen.auxiliaryTopLeftArea?.width,
-           let topRightNotchpadding: CGFloat = screen.auxiliaryTopRightArea?.width
-        {
-            notchWidth = screen.frame.width - topLeftNotchpadding - topRightNotchpadding + 4
-        }
+        let layout = NotchScreenLayout(screen: screen)
+        notchWidth = layout.physicalNotchWidth + 4
 
-        // Check if the Mac has a notch
-        if screen.safeAreaInsets.top > 0 {
-            // This is a display WITH a notch - use notch height settings
+        if layout.hasPhysicalNotch {
             notchHeight = Defaults[.notchHeight]
             if Defaults[.notchHeightMode] == .matchRealNotchSize {
                 notchHeight = screen.safeAreaInsets.top
             } else if Defaults[.notchHeightMode] == .matchMenuBar {
-                notchHeight = screen.frame.maxY - screen.visibleFrame.maxY
+                notchHeight = layout.menuBarHeight
             }
         } else {
-            // This is a display WITHOUT a notch - use non-notch height settings
             notchHeight = Defaults[.nonNotchHeight]
-            if Defaults[.nonNotchHeightMode] == .matchMenuBar {
-                notchHeight = screen.frame.maxY - screen.visibleFrame.maxY
+            if Defaults[.notchHeightMode] == .matchMenuBar {
+                notchHeight = layout.menuBarHeight
             }
         }
     }
