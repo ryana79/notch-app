@@ -16,7 +16,6 @@ import SwiftUIIntrospect
 
 struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
-    @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
     @State private var accentColorUpdateTrigger = UUID()
     @ObservedObject private var appUpdates = AppUpdateManager.shared
 
@@ -27,30 +26,31 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
+        HStack(spacing: 0) {
             VStack(spacing: 0) {
                 SettingsSidebarHeader()
                 Divider().opacity(0.35)
-                List {
-                    ForEach(SettingsTab.allCases) { tab in
-                        Button {
-                            selectedTab = tab
-                        } label: {
-                            SettingsSidebarRow(tab: tab, isSelected: selectedTab == tab)
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(SettingsTab.allCases) { tab in
+                            Button {
+                                selectedTab = tab
+                            } label: {
+                                SettingsSidebarRow(tab: tab, isSelected: selectedTab == tab)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                 }
-                .listStyle(.sidebar)
-                .scrollContentBackground(.hidden)
+                Spacer(minLength: 0)
             }
+            .frame(width: 260)
             .background(Color(nsColor: .underPageBackgroundColor))
-            .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
-        } detail: {
+
+            Divider()
+
             VStack(spacing: 0) {
                 if let controller = updaterController {
                     SettingsUpdateBanner(updater: controller.updater)
@@ -87,8 +87,6 @@ struct SettingsView: View {
             }
             .background(Color(nsColor: .windowBackgroundColor))
         }
-        .navigationSplitViewStyle(.balanced)
-        .toolbar(removing: .sidebarToggle)
         .formStyle(.grouped)
         .frame(minWidth: 780, minHeight: 620)
         .tint(.effectiveAccent)

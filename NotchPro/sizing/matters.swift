@@ -62,10 +62,9 @@ struct NotchScreenLayout {
         return frame.midX
     }
 
-    /// Top inset so open content clears the camera notch and menu bar.
+    /// Small inset inside the open shell so top corner radius isn't clipped.
     var openContentTopInset: CGFloat {
-        guard hasPhysicalNotch else { return windowTopInset }
-        return max(14, menuBarHeight + 2)
+        windowTopInset
     }
 
     var menuBarHeight: CGFloat {
@@ -93,7 +92,7 @@ struct NotchScreenLayout {
             return CGSize(width: width, height: height)
         }
 
-        let width = min(max(open.width, closed.width + 64), frame.width - 12)
+        let width = min(getStatusRailMinWidth(screenUUID: screenUUID), frame.width - 12)
         let height = min(menuBarHeight + closed.height + 12, frame.height - 6)
         return CGSize(width: width, height: height)
     }
@@ -182,6 +181,20 @@ enum MusicPlayerImageSizes {
     }
     
     return nil
+}
+
+@MainActor func getStatusRailMinWidth(screenUUID: String? = nil) -> CGFloat {
+    let closed = getClosedNotchSize(screenUUID: screenUUID)
+    var width: CGFloat = 24
+
+    if Defaults[.showWeatherGlance] { width += 118 }
+    if Defaults[.showPortfolioGlance] { width += 80 }
+    if Defaults[.showWorkoutGlance] { width += 72 }
+    if Defaults[.showCalendar] { width += 58 }
+    if Defaults[.showFocusTimer] { width += 50 }
+    if Defaults[.showBatteryIndicator] { width += 54 }
+
+    return min(max(closed.width, width), getOpenNotchSize().width)
 }
 
 @MainActor func getClosedNotchSize(screenUUID: String? = nil) -> CGSize {
