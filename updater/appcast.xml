@@ -6,6 +6,17 @@
         <description>NotchPro updates for macOS</description>
         <language>en</language>
         <item>
+            <title>1.0.12</title>
+            <pubDate>Sun, 07 Jun 2026 03:02:37 +0000</pubDate>
+            <link>https://github.com/ryana79/notch-app/releases</link>
+            <sparkle:version>15</sparkle:version>
+            <sparkle:shortVersionString>1.0.12</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[NotchPro v1.0.12
+]]></description>
+            <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.12/NotchPro.dmg" length="13514748" type="application/octet-stream" sparkle:edSignature="p9K0TgQZt20alzHvLjnr6PXUcX0+7oiNYybbvH95W3ZgY4loMyil9MVzgL1auwlWhGvx+U7VfdHytmffig0BCQ=="/>
+        </item>
+        <item>
             <title>1.0.11</title>
             <pubDate>Sat, 06 Jun 2026 22:05:56 +0000</pubDate>
             <link>https://github.com/ryana79/notch-app/releases</link>
@@ -26,17 +37,6 @@
             <description><![CDATA[NotchPro v1.0.10
 ]]></description>
             <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.10/NotchPro.dmg" length="13499730" type="application/octet-stream" sparkle:edSignature="Idcj0jv27U+WLx36t1MkEqNmXkD9IbGNiiZHsXk68xtTnpdTXDlWWIsludsgV16T1YmkYiZAEQInk/jfrrONDg=="/>
-        </item>
-        <item>
-            <title>1.0.9</title>
-            <pubDate>Sat, 06 Jun 2026 21:37:09 +0000</pubDate>
-            <link>https://github.com/ryana79/notch-app/releases</link>
-            <sparkle:version>12</sparkle:version>
-            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[NotchPro v1.0.9
-]]></description>
-            <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.9/NotchPro.dmg" length="13512268" type="application/octet-stream" sparkle:edSignature="42f+G/1TrgLgrqhXcL503YpiwbiZxiwvyRRtQed//5sVmPbcG0D5lVn2rtqLrAFlrhDr8M3rIfpCbzTLOrkxAA=="/>
         </item>
     </channel>
 </rss>
