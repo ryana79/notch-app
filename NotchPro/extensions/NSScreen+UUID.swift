@@ -9,6 +9,16 @@ import AppKit
 import CoreGraphics
 
 extension NSScreen {
+    /// Built-in display with a camera notch (MacBook Air/Pro), if present.
+    @MainActor static var builtInNotchedScreen: NSScreen? {
+        screens.first { $0.safeAreaInsets.top > 0 }
+    }
+
+    /// Best screen for the notch overlay — prefers the built-in notched panel.
+    @MainActor static var preferredNotchScreen: NSScreen? {
+        builtInNotchedScreen ?? main
+    }
+
     /// Returns a persistent UUID for this display
     var displayUUID: String? {
         guard let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {

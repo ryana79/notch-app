@@ -172,6 +172,8 @@
 		B1PORT012E70000100000006 /* PortfolioGlanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000006 /* PortfolioGlanceView.swift */; };
 		B1PORT012E70000100000007 /* BrokerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000007 /* BrokerSettingsView.swift */; };
 		B1PORT012E70000100000008 /* localhost.p12 in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000008 /* localhost.p12 */; };
+		B1PORT012E70000100000017 /* localhost.crt in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000009 /* localhost.crt */; };
+		B1PORT012E70000100000018 /* localhost.key in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000016 /* localhost.key */; };
 		B1PORT012E70000100000009 /* BrokerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000010 /* BrokerConfig.swift */; };
 		B1PORT012E70000100000011 /* BrokerCredentials.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000011 /* BrokerCredentials.example.plist */; };
 		B1PORT012E70000100000012 /* BrokerCredentials.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1PORT012E70000100000012 /* BrokerCredentials.plist */; };
@@ -373,7 +375,8 @@
 		A1PORT012E70000100000006 /* PortfolioGlanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioGlanceView.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000007 /* BrokerSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerSettingsView.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000008 /* localhost.p12 */ = {isa = PBXFileReference; lastKnownFileType = file; path = localhost.p12; sourceTree = "<group>"; };
-		A1PORT012E70000100000009 /* localhost.crt */ = {isa = PBXFileReference; lastKnownFileType = file; path = localhost.crt; sourceTree = "<group>"; };
+		A1PORT012E70000100000009 /* localhost.crt */ = {isa = PBXFileReference; lastKnownFileType = text; path = localhost.crt; sourceTree = "<group>"; };
+		A1PORT012E70000100000016 /* localhost.key */ = {isa = PBXFileReference; lastKnownFileType = text; path = localhost.key; sourceTree = "<group>"; };
 		A1PORT012E70000100000010 /* BrokerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerConfig.swift; sourceTree = "<group>"; };
 		A1PORT012E70000100000011 /* BrokerCredentials.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BrokerCredentials.example.plist; sourceTree = "<group>"; };
 		A1PORT012E70000100000012 /* BrokerCredentials.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BrokerCredentials.plist; sourceTree = "<group>"; };
@@ -581,6 +584,7 @@
 			children = (
 				A1PORT012E70000100000008 /* localhost.p12 */,
 				A1PORT012E70000100000009 /* localhost.crt */,
+				A1PORT012E70000100000016 /* localhost.key */,
 			);
 			path = OAuthLocalhost;
 			sourceTree = "<group>";
@@ -1076,6 +1080,8 @@
 				B17266E12C6532560031BA0D /* Localizable.xcstrings in Resources */,
 				14A7E5972C65FD31008C1BE9 /* boring.m4a in Resources */,
 				B1PORT012E70000100000008 /* localhost.p12 in Resources */,
+				B1PORT012E70000100000017 /* localhost.crt in Resources */,
+				B1PORT012E70000100000018 /* localhost.key in Resources */,
 				B1PORT012E70000100000011 /* BrokerCredentials.example.plist in Resources */,
 				B1PORT012E70000100000012 /* BrokerCredentials.plist in Resources */,
 			);
@@ -1472,7 +1478,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.11;
+				MARKETING_VERSION = 1.0.12;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro;
 				PRODUCT_NAME = NotchPro;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1527,7 +1533,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.11;
+				MARKETING_VERSION = 1.0.12;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro;
 				PRODUCT_NAME = NotchPro;
 				PROVISIONING_PROFILE_SPECIFIER = "";

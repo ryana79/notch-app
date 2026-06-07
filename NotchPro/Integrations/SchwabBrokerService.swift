@@ -97,6 +97,9 @@ final class SchwabBrokerService {
         let server = OAuthCallbackServer()
         callbackServer = server
 
+        // Start the local HTTPS listener before opening Schwab so the redirect succeeds.
+        try await server.prepare()
+
         let clientID = config.schwabClientID
         let authURL = URL(string: """
         \(baseURL)/v1/oauth/authorize?response_type=code&client_id=\(clientID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? clientID)&redirect_uri=\(OAuthCallbackServer.redirectURI.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? OAuthCallbackServer.redirectURI)
@@ -105,6 +108,7 @@ final class SchwabBrokerService {
         NSWorkspace.shared.open(authURL)
 
         let code = try await server.waitForAuthorizationCode()
+        server.stop()
         callbackServer = nil
 
         try await exchangeCode(code)

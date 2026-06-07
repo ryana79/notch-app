@@ -213,9 +213,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let notchHeight = openSize.height
         let notchWidth = openSize.width
         
-        // Create notch region at the top-center of the screen where an open notch would occupy
+        let layout = NotchScreenLayout(screen: screen)
         let notchRegion = CGRect(
-            x: screenFrame.midX - notchWidth / 2,
+            x: layout.notchCenterX - notchWidth / 2,
             y: screenFrame.maxY - notchHeight,
             width: notchWidth,
             height: notchHeight
@@ -246,7 +246,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func createNotchProWindow(for screen: NSScreen, with viewModel: NotchProViewModel) -> NSWindow {
-        let size = getWindowSize()
+        let layout = NotchScreenLayout(screen: screen)
+        let size = layout.windowSize(
+            notchState: viewModel.notchState,
+            isDetailExpanded: PortfolioManager.shared.isDetailExpanded
+        )
         let rect = NSRect(x: 0, y: 0, width: size.width, height: size.height)
         let styleMask: NSWindow.StyleMask = [.borderless, .nonactivatingPanel, .utilityWindow, .hudWindow]
         
@@ -280,22 +284,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
-    private func positionWindow(_ window: NSWindow, on screen: NSScreen, changeAlpha: Bool = false) {
+    private func positionWindow(
+        _ window: NSWindow,
+        on screen: NSScreen,
+        viewModel: NotchProViewModel,
+        changeAlpha: Bool = false
+    ) {
         if changeAlpha {
             window.alphaValue = 0
         }
 
-        let screenFrame = screen.frame
-        let size = getWindowSize()
-        window.setFrame(
-            NSRect(
-                x: screenFrame.midX - size.width / 2,
-                y: screenFrame.maxY - size.height,
-                width: size.width,
-                height: size.height
-            ),
-            display: true
+        let layout = NotchScreenLayout(screen: screen)
+        let size = layout.windowSize(
+            notchState: viewModel.notchState,
+            isDetailExpanded: PortfolioManager.shared.isDetailExpanded
         )
+        window.setFrame(layout.windowFrame(for: size), display: true)
         window.alphaValue = 1
     }
 
@@ -593,7 +597,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
 
                 if let window = windows[uuid], let viewModel = viewModels[uuid] {
-                    positionWindow(window, on: screen, changeAlpha: changeAlpha)
+                    positionWindow(window, on: screen, viewModel: viewModel, changeAlpha: changeAlpha)
 
                     if viewModel.notchState == .closed {
                         viewModel.close()
@@ -606,10 +610,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if let preferredScreen = NSScreen.screen(withUUID: coordinator.preferredScreenUUID ?? "") {
                 coordinator.selectedScreenUUID = coordinator.preferredScreenUUID ?? ""
                 selectedScreen = preferredScreen
-            } else if Defaults[.automaticallySwitchDisplay], let mainScreen = NSScreen.main,
-                      let mainUUID = mainScreen.displayUUID {
-                coordinator.selectedScreenUUID = mainUUID
+            } else if Defaults[.automaticallySwitchDisplay], let mainScreen = NSScreen.main {
+                coordinator.selectedScreenUUID = mainScreen.displayUUID ?? ""
                 selectedScreen = mainScreen
+            } else if let builtInScreen = NSScreen.builtInNotchedScreen ?? NSScreen.main {
+                coordinator.selectedScreenUUID = builtInScreen.displayUUID ?? ""
+                selectedScreen = builtInScreen
             } else {
                 if let window = window {
                     window.alphaValue = 0
@@ -629,7 +635,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             if let window = window {
-                positionWindow(window, on: selectedScreen, changeAlpha: changeAlpha)
+                positionWindow(window, on: selectedScreen, viewModel: vm, changeAlpha: changeAlpha)
 
                 if vm.notchState == .closed {
                     vm.close()
