@@ -606,16 +606,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else {
             let selectedScreen: NSScreen
+            let knownScreens = NSScreen.screens
+            let builtInNotched = NSScreen.builtInNotchedScreen
+            let preferredUUID = coordinator.preferredScreenUUID ?? ""
+            let preferredScreen = NSScreen.screen(withUUID: preferredUUID)
 
-            if let preferredScreen = NSScreen.screen(withUUID: coordinator.preferredScreenUUID ?? "") {
-                coordinator.selectedScreenUUID = coordinator.preferredScreenUUID ?? ""
+            if let builtInNotched, knownScreens.contains(where: { $0 == builtInNotched }) {
+                if let preferredScreen,
+                   preferredScreen != builtInNotched,
+                   knownScreens.contains(where: { $0 == preferredScreen }) {
+                    coordinator.selectedScreenUUID = preferredUUID
+                    selectedScreen = preferredScreen
+                } else {
+                    coordinator.selectedScreenUUID = builtInNotched.displayUUID ?? ""
+                    selectedScreen = builtInNotched
+                }
+            } else if let preferredScreen {
+                coordinator.selectedScreenUUID = preferredUUID
                 selectedScreen = preferredScreen
             } else if Defaults[.automaticallySwitchDisplay], let mainScreen = NSScreen.main {
                 coordinator.selectedScreenUUID = mainScreen.displayUUID ?? ""
                 selectedScreen = mainScreen
-            } else if let builtInScreen = NSScreen.builtInNotchedScreen ?? NSScreen.main {
-                coordinator.selectedScreenUUID = builtInScreen.displayUUID ?? ""
-                selectedScreen = builtInScreen
+            } else if let fallback = NSScreen.main {
+                coordinator.selectedScreenUUID = fallback.displayUUID ?? ""
+                selectedScreen = fallback
             } else {
                 if let window = window {
                     window.alphaValue = 0

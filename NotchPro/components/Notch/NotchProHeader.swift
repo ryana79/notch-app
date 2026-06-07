@@ -5,6 +5,7 @@
 //  Created by Harsh Vardhan  Goswami  on 04/08/24.
 //
 
+import AppKit
 import Defaults
 import SwiftUI
 
@@ -60,24 +61,39 @@ struct NotchProHeader: View {
     @ObservedObject var coordinator = NotchProCoordinator.shared
     @StateObject var tvm = ShelfStateViewModel.shared
 
+    private var screenLayout: NotchScreenLayout? {
+        guard let uuid = vm.screenUUID,
+              let screen = NSScreen.screen(withUUID: uuid) else { return nil }
+        return NotchScreenLayout(screen: screen)
+    }
+
+    private var physicalNotchWidth: CGFloat {
+        guard let layout = screenLayout, layout.hasPhysicalNotch else { return 0 }
+        return layout.physicalNotchWidth
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if vm.notchState == .open {
                 NotchCollapseHandle()
             }
 
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 HStack {
                     if (!tvm.isEmpty || coordinator.alwaysShowTabs) && Defaults[.notchProShelf] {
                         TabSelectionView()
-                    } else if vm.notchState == .open {
-                        EmptyView()
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .opacity(vm.notchState == .closed ? 0 : 1)
                 .blur(radius: vm.notchState == .closed ? 20 : 0)
                 .zIndex(2)
+
+                if physicalNotchWidth > 0 {
+                    Color.clear
+                        .frame(width: physicalNotchWidth)
+                        .accessibilityHidden(true)
+                }
 
                 HStack(spacing: 4) {
                     if vm.notchState == .open {
@@ -112,6 +128,7 @@ struct NotchProHeader: View {
                 .blur(radius: vm.notchState == .closed ? 20 : 0)
                 .zIndex(2)
             }
+            .padding(.horizontal, 8)
         }
         .foregroundColor(.gray)
         .environmentObject(vm)
