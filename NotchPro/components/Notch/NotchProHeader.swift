@@ -68,8 +68,8 @@ struct NotchProHeader: View {
     }
 
     private var physicalNotchWidth: CGFloat {
-        guard let layout = screenLayout, layout.hasPhysicalNotch else { return 0 }
-        return layout.physicalNotchWidth
+        guard let layout = screenLayout, layout.variant == .notchedCamera else { return 0 }
+        return layout.cameraHousingWidth ?? 0
     }
 
     var body: some View {

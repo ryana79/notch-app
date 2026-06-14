@@ -17,19 +17,19 @@ enum BrokerTokenCache {
 
     static func schwabAccess() -> String? {
         if let cached = schwabAccessToken { return cached }
-        schwabAccessToken = KeychainStore.load(account: BrokerCredentialKey.schwabAccessToken)
+        warmSchwabFromKeychain()
         return schwabAccessToken
     }
 
     static func schwabRefresh() -> String? {
         if let cached = schwabRefreshToken { return cached }
-        schwabRefreshToken = KeychainStore.load(account: BrokerCredentialKey.schwabRefreshToken)
+        warmSchwabFromKeychain()
         return schwabRefreshToken
     }
 
     static func schwabExpiry() -> String? {
         if let cached = schwabTokenExpiry { return cached }
-        schwabTokenExpiry = KeychainStore.load(account: BrokerCredentialKey.schwabTokenExpiry)
+        warmSchwabFromKeychain()
         return schwabTokenExpiry
     }
 
@@ -47,19 +47,19 @@ enum BrokerTokenCache {
 
     static func webullAccess() -> String? {
         if let cached = webullAccessToken { return cached }
-        webullAccessToken = KeychainStore.load(account: BrokerCredentialKey.webullAccessToken)
+        warmWebullFromKeychain()
         return webullAccessToken
     }
 
     static func webullExpiry() -> String? {
         if let cached = webullTokenExpiry { return cached }
-        webullTokenExpiry = KeychainStore.load(account: BrokerCredentialKey.webullTokenExpiry)
+        warmWebullFromKeychain()
         return webullTokenExpiry
     }
 
     static func webullAccountID() -> String? {
         if let cached = cachedWebullAccountID { return cached }
-        cachedWebullAccountID = KeychainStore.load(account: BrokerCredentialKey.webullAccountID)
+        warmWebullFromKeychain()
         return cachedWebullAccountID
     }
 
@@ -76,14 +76,16 @@ enum BrokerTokenCache {
     }
 
     static func warmSchwabFromKeychain() {
-        _ = schwabRefresh()
-        _ = schwabAccess()
-        _ = schwabExpiry()
+        KeychainTokenStore.migrateFromLegacyIfNeeded()
+        if let record = try? KeychainTokenStore.load(provider: .schwab) {
+            applySchwabRecord(record)
+        }
     }
 
     static func warmWebullFromKeychain() {
-        _ = webullAccess()
-        _ = webullExpiry()
-        _ = webullAccountID()
+        KeychainTokenStore.migrateFromLegacyIfNeeded()
+        if let record = try? KeychainTokenStore.load(provider: .webull) {
+            applyWebullRecord(record, accountID: record.providerUserID)
+        }
     }
 }

@@ -20,6 +20,8 @@ final class PortfolioManager: ObservableObject {
 
     private var refreshTimer: Timer?
     private var isRefreshScheduled = false
+    private var cancellables = Set<AnyCancellable>()
+    private let connectionManager = BrokerageConnectionManager.shared
 
     private static let portfolioGlanceMigrationKey = "didMigratePortfolioGlance1.0.4"
 
@@ -28,10 +30,27 @@ final class PortfolioManager: ObservableObject {
             Defaults[.showPortfolioGlance] = true
             UserDefaults.standard.set(true, forKey: Self.portfolioGlanceMigrationKey)
         }
+
+        connectionManager.$schwabPhase
+            .receive(on: RunLoop.main)
+            .sink { [weak self] phase in
+                self?.schwabState = Self.mapPhase(phase)
+            }
+            .store(in: &cancellables)
+
+        connectionManager.$webullPhase
+            .receive(on: RunLoop.main)
+            .sink { [weak self] phase in
+                self?.webullState = Self.mapPhase(phase)
+            }
+            .store(in: &cancellables)
+
+        schwabState = Self.mapPhase(connectionManager.schwabPhase)
+        webullState = Self.mapPhase(connectionManager.webullPhase)
     }
 
     var hasAnyConnection: Bool {
-        SchwabBrokerService.shared.isConnected || WebullBrokerService.shared.isConnected
+        connectionManager.hasAnyConnection
     }
 
     func startIfEnabled() {
@@ -39,7 +58,7 @@ final class PortfolioManager: ObservableObject {
             stop()
             return
         }
-        applyConnectionStatesFromCache()
+        refreshConnectionStatesFromKeychain()
         if hasAnyConnection {
             scheduleRefreshTimer(deferImmediateRefresh: true)
         }
@@ -73,7 +92,7 @@ final class PortfolioManager: ObservableObject {
 
     private func scheduleRefreshTimer(deferImmediateRefresh: Bool) {
         guard Defaults[.showPortfolioGlance], !isRefreshScheduled else { return }
-        applyConnectionStatesFromCache()
+        refreshConnectionStatesFromKeychain()
         isRefreshScheduled = true
         refreshTimer?.invalidate()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
@@ -87,99 +106,59 @@ final class PortfolioManager: ObservableObject {
     }
 
     func updateConnectionStates() {
-        applyConnectionStatesFromCache()
+        refreshConnectionStatesFromKeychain()
     }
 
     func refreshConnectionStatesFromKeychain() {
-        reconcileBrokerConnectionCache()
-        applyConnectionStatesFromCache()
-    }
-
-    private func applyConnectionStatesFromCache() {
-        schwabState = SchwabBrokerService.shared.isConnected ? .connected : .disconnected
-        webullState = WebullBrokerService.shared.isConnected ? .connected : .disconnected
-    }
-
-    private func reconcileBrokerConnectionCache() {
-        BrokerTokenCache.warmSchwabFromKeychain()
-        BrokerTokenCache.warmWebullFromKeychain()
-        if BrokerTokenCache.schwabRefresh() != nil {
-            BrokerConnectionCache.setSchwabConnected(true)
-        } else if BrokerConnectionCache.schwabConnected {
-            BrokerConnectionCache.setSchwabConnected(false)
-        }
-        if BrokerTokenCache.webullAccess() != nil {
-            BrokerConnectionCache.setWebullConnected(true)
-        } else if BrokerConnectionCache.webullConnected {
-            BrokerConnectionCache.setWebullConnected(false)
-        }
+        connectionManager.refreshPhasesFromStorage()
+        schwabState = Self.mapPhase(connectionManager.schwabPhase)
+        webullState = Self.mapPhase(connectionManager.webullPhase)
     }
 
     func warmBrokerTokensForRefresh() {
+        KeychainTokenStore.migrateFromLegacyIfNeeded()
         BrokerTokenCache.warmSchwabFromKeychain()
         BrokerTokenCache.warmWebullFromKeychain()
     }
 
     func connectSchwab() async {
-        schwabState = .connecting
         lastError = nil
-        do {
-            try await SchwabBrokerService.shared.connect()
-            schwabState = .connected
+        await connectionManager.connectSchwab()
+        lastError = connectionManager.lastError
+        if connectionManager.schwabPhase.isConnected {
             enableGlanceAndRefresh()
-        } catch {
-            schwabState = .error(error.localizedDescription)
-            lastError = error.localizedDescription
         }
     }
 
     func connectSchwab(manualRedirectURL: String) async {
-        schwabState = .connecting
         lastError = nil
-        do {
-            try await SchwabBrokerService.shared.connect(manualRedirectURL: manualRedirectURL)
-            schwabState = .connected
+        await connectionManager.connectSchwab(manualRedirectURL: manualRedirectURL)
+        lastError = connectionManager.lastError
+        if connectionManager.schwabPhase.isConnected {
             enableGlanceAndRefresh()
-        } catch {
-            schwabState = .error(error.localizedDescription)
-            lastError = error.localizedDescription
         }
     }
 
     func disconnectSchwab() {
-        SchwabBrokerService.shared.disconnect()
-        schwabState = .disconnected
+        connectionManager.disconnectSchwab()
         Task { await refresh() }
     }
 
     func connectWebull() async {
-        webullState = .connecting
         lastError = nil
-        do {
-            try await WebullBrokerService.shared.connect {
-                self.webullState = .awaitingVerification(
-                    "Approve the SMS code in Webull → Menu → Messages → OpenAPI Notifications."
-                )
-            }
-            webullState = .connected
+        await connectionManager.connectWebull {
+            self.webullState = .awaitingVerification(
+                "Approve the SMS code in Webull → Menu → Messages → OpenAPI Notifications."
+            )
+        }
+        lastError = connectionManager.lastError
+        if connectionManager.webullPhase.isConnected {
             enableGlanceAndRefresh()
-        } catch {
-            if case WebullBrokerError.smsExpired = error {
-                webullState = .awaitingVerification(error.localizedDescription ?? "SMS code expired. Tap Connect Webull again.")
-            } else if case WebullBrokerError.awaitingVerification = error {
-                webullState = .awaitingVerification("Open Webull → Menu → Messages → OpenAPI Notifications and enter the SMS code.")
-            } else if case WebullBrokerError.sessionExpired = error {
-                webullState = .error(error.localizedDescription ?? "Webull session expired.")
-            } else {
-                webullState = .error(error.localizedDescription)
-            }
-            lastError = error.localizedDescription
         }
     }
 
     func disconnectWebull() {
-        WebullBrokerService.shared.disconnect()
-        webullState = .disconnected
+        connectionManager.disconnectWebull()
         Task { await refresh() }
     }
 
@@ -207,6 +186,12 @@ final class PortfolioManager: ObservableObject {
                 allHoldings.append(contentsOf: holdings)
                 connected.append(.schwab)
                 schwabState = .connected
+            } catch let error as BrokerageConnectionError {
+                schwabState = .error(error.localizedDescription ?? "Schwab connection failed.")
+                lastError = error.localizedDescription
+                if error.requiresReauthorization {
+                    connectionManager.disconnectSchwab()
+                }
             } catch {
                 schwabState = .error(error.localizedDescription)
                 lastError = error.localizedDescription
@@ -219,13 +204,16 @@ final class PortfolioManager: ObservableObject {
                 allHoldings.append(contentsOf: holdings)
                 connected.append(.webull)
                 webullState = .connected
-            } catch {
-                if case WebullBrokerError.sessionExpired = error {
-                    WebullBrokerService.shared.disconnect()
+            } catch let error as BrokerageConnectionError {
+                if error.requiresReauthorization {
+                    connectionManager.disconnectWebull()
                     webullState = .disconnected
                 } else {
-                    webullState = .error(error.localizedDescription)
+                    webullState = .error(error.localizedDescription ?? "Webull connection failed.")
                 }
+                lastError = error.localizedDescription
+            } catch {
+                webullState = .error(error.localizedDescription)
                 lastError = error.localizedDescription
             }
         }
@@ -249,5 +237,20 @@ final class PortfolioManager: ObservableObject {
 
     private var refreshInterval: TimeInterval {
         Defaults[.performanceMode] ? 900 : 300
+    }
+
+    private static func mapPhase(_ phase: BrokerageConnectionPhase) -> BrokerConnectionState {
+        switch phase {
+        case .disconnected, .expired:
+            return .disconnected
+        case .authorizing, .exchangingCode, .refreshingToken:
+            return .connecting
+        case .connected:
+            return .connected
+        case .awaitingVerification(let message):
+            return .awaitingVerification(message)
+        case .failed(let message):
+            return .error(message)
+        }
     }
 }

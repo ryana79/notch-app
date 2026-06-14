@@ -40,6 +40,19 @@ struct ContentView: View {
     @Default(.accentGlowEnabled) var accentGlowEnabled
 
     @Default(.showNotHumanFace) var showNotHumanFace
+    @Default(.showNotchLayoutDebug) var showNotchLayoutDebug
+
+    private var islandLayout: NotchDisplayLayout? {
+        notchDisplayLayout(for: vm.screenUUID, followMouse: Defaults[.automaticallySwitchDisplay])
+    }
+
+    private var layoutDebugDiagnostics: NotchLayoutDiagnostics? {
+        layoutDiagnostics(
+            screenUUID: vm.screenUUID,
+            notchState: vm.notchState,
+            isDetailExpanded: PortfolioManager.shared.isDetailExpanded
+        )
+    }
 
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
@@ -63,7 +76,8 @@ struct ContentView: View {
     private let zeroHeightHoverPadding: CGFloat = 10
 
     private var contentTopInset: CGFloat {
-        vm.notchState == .open ? windowTopInset : 0
+        guard vm.notchState == .open else { return 0 }
+        return islandLayout?.openContentTopInset ?? windowTopInset
     }
 
     private var topCornerRadius: CGFloat {
@@ -340,6 +354,14 @@ struct ContentView: View {
         .background(dragDetector)
         .preferredColorScheme(.dark)
         .environmentObject(vm)
+        .overlay(alignment: .topLeading) {
+            #if DEBUG
+            if showNotchLayoutDebug, let diagnostics = layoutDebugDiagnostics {
+                NotchLayoutDebugOverlay(diagnostics: diagnostics)
+                    .padding(8)
+            }
+            #endif
+        }
         .onChange(of: vm.anyDropZoneTargeting) { _, isTargeted in
             anyDropDebounceTask?.cancel()
 

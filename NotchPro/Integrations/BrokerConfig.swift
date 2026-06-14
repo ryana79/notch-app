@@ -25,7 +25,16 @@ struct BrokerConfig {
     }
 
     var isSchwabConfigured: Bool {
-        !schwabClientID.isEmpty && (!schwabClientSecret.isEmpty || schwabTokenProxyURL != nil)
+        !schwabClientID.isEmpty && (schwabTokenProxyURL != nil || (Self.allowsLocalSchwabSecret && !schwabClientSecret.isEmpty))
+    }
+
+    /// Shipped builds must exchange tokens via the backend proxy — never embed client_secret.
+    private static var allowsLocalSchwabSecret: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
     }
 
     var isWebullConfigured: Bool {

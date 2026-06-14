@@ -300,6 +300,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             isDetailExpanded: PortfolioManager.shared.isDetailExpanded
         )
         window.setFrame(layout.windowFrame(for: size), display: true)
+        NotchLayoutDebugger.log(
+            layout.diagnostics(
+                notchState: viewModel.notchState,
+                isDetailExpanded: PortfolioManager.shared.isDetailExpanded
+            )
+        )
         window.alphaValue = 1
     }
 
@@ -624,10 +630,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else if let preferredScreen {
                 coordinator.selectedScreenUUID = preferredUUID
                 selectedScreen = preferredScreen
-            } else if Defaults[.automaticallySwitchDisplay], let mainScreen = NSScreen.main {
-                coordinator.selectedScreenUUID = mainScreen.displayUUID ?? ""
-                selectedScreen = mainScreen
-            } else if let fallback = NSScreen.main {
+            } else if Defaults[.automaticallySwitchDisplay],
+                      let mouseScreen = activeIslandScreen(preferredUUID: preferredUUID, followMouse: true) {
+                coordinator.selectedScreenUUID = mouseScreen.displayUUID ?? ""
+                selectedScreen = mouseScreen
+            } else if let fallback = activeIslandScreen(preferredUUID: preferredUUID, followMouse: false) {
                 coordinator.selectedScreenUUID = fallback.displayUUID ?? ""
                 selectedScreen = fallback
             } else {

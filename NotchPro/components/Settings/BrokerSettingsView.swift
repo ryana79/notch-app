@@ -10,6 +10,7 @@ struct IntegrationsSettings: View {
     @Default(.showPortfolioGlance) var showPortfolioGlance
     @Default(.enablePortfolioInsights) var enablePortfolioInsights
     @ObservedObject private var portfolio = PortfolioManager.shared
+    @ObservedObject private var connectionManager = BrokerageConnectionManager.shared
 
     @State private var schwabManualURL = ""
     @State private var groqAPIKey = ""
@@ -54,6 +55,14 @@ struct IntegrationsSettings: View {
                     schwabSection
                     webullSection
                     portfolioInsightsSection
+
+                    #if DEBUG
+                    SettingsSectionCard(title: "Connection diagnostics") {
+                        NavigationLink("Open debug report") {
+                            BrokerConnectionDebugView()
+                        }
+                    }
+                    #endif
 
                     if let statusMessage {
                         Text(statusMessage)
@@ -133,7 +142,7 @@ struct IntegrationsSettings: View {
                 title: "Charles Schwab",
                 icon: "building.columns.fill",
                 tint: .blue,
-                connected: SchwabBrokerService.shared.isConnected,
+                connected: connectionManager.schwabPhase.isConnected,
                 state: portfolio.schwabState
             )
 
@@ -145,12 +154,12 @@ struct IntegrationsSettings: View {
                 stateMessage(portfolio.schwabState)
                 connectButton(
                     "Connect Schwab",
-                    isConnecting: portfolio.schwabState == .connecting
+                    isConnecting: portfolio.schwabState == .connecting || connectionManager.authorizationInProgress
                 ) {
                     await portfolio.connectSchwab()
                     statusMessage = portfolio.lastError ?? "Schwab connected."
                 }
-                if SchwabBrokerService.shared.isConnected {
+                if connectionManager.schwabPhase.isConnected {
                     disconnectButton("Disconnect Schwab") {
                         portfolio.disconnectSchwab()
                         statusMessage = "Schwab disconnected."
@@ -183,7 +192,7 @@ struct IntegrationsSettings: View {
                 title: "Webull",
                 icon: "chart.bar.fill",
                 tint: .cyan,
-                connected: WebullBrokerService.shared.isConnected,
+                connected: connectionManager.webullPhase.isConnected,
                 state: portfolio.webullState
             )
 
@@ -195,7 +204,7 @@ struct IntegrationsSettings: View {
                 stateMessage(portfolio.webullState)
                 connectButton(
                     "Connect Webull",
-                    isConnecting: portfolio.webullState == .connecting
+                    isConnecting: portfolio.webullState == .connecting || connectionManager.authorizationInProgress
                 ) {
                     await portfolio.connectWebull()
                     statusMessage = portfolio.lastError ?? "Webull connected."
@@ -209,7 +218,7 @@ struct IntegrationsSettings: View {
                     }
                     .buttonStyle(.bordered)
                 }
-                if WebullBrokerService.shared.isConnected {
+                if connectionManager.webullPhase.isConnected {
                     disconnectButton("Disconnect Webull") {
                         portfolio.disconnectWebull()
                         statusMessage = "Webull disconnected."
