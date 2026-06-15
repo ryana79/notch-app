@@ -1,17 +1,26 @@
 //
 //  BrokerHTTPClient.swift
-//  NotchPro
+//  NotchProCore
 //
 
 import Foundation
 
-struct BrokerHTTPResponse {
-    let statusCode: Int
-    let data: Data
-    let correlationID: String
+public struct BrokerHTTPResponse: Sendable {
+    public let statusCode: Int
+    public let data: Data
+    public let correlationID: String
+
+    public init(statusCode: Int, data: Data, correlationID: String) {
+        self.statusCode = statusCode
+        self.data = data
+        self.correlationID = correlationID
+    }
 }
 
-enum BrokerHTTPClient {
+public enum BrokerHTTPClient {
+    /// Optional hook for app-level diagnostics (status code, correlation ID).
+    public static var onResponse: (@Sendable (Int, String) -> Void)?
+
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 25
@@ -19,7 +28,7 @@ enum BrokerHTTPClient {
         return URLSession(configuration: config)
     }()
 
-    static func postJSON(
+    public static func postJSON(
         url: URL,
         body: [String: Any],
         headers: [String: String] = [:],
@@ -33,7 +42,7 @@ enum BrokerHTTPClient {
         return try await perform(request, maxAttempts: maxAttempts)
     }
 
-    static func data(
+    public static func data(
         for request: URLRequest,
         maxAttempts: Int = 3
     ) async throws -> BrokerHTTPResponse {
@@ -56,13 +65,7 @@ enum BrokerHTTPClient {
                     throw BrokerageConnectionError.networkUnavailable
                 }
 
-                await MainActor.run {
-                    BrokerageDiagnostics.shared.record(
-                        status: http.statusCode,
-                        correlationID: correlationID,
-                        errorCode: nil
-                    )
-                }
+                onResponse?(http.statusCode, correlationID)
 
                 if (200...299).contains(http.statusCode) {
                     return BrokerHTTPResponse(statusCode: http.statusCode, data: data, correlationID: correlationID)
@@ -114,43 +117,5 @@ enum BrokerHTTPClient {
             }
             return nil
         }
-    }
-}
-
-@MainActor
-final class BrokerageDiagnostics: ObservableObject {
-    static let shared = BrokerageDiagnostics()
-
-    @Published private(set) var lastHTTPStatus: Int?
-    @Published private(set) var lastCorrelationID: String?
-    @Published private(set) var lastProviderErrorCode: String?
-    @Published private(set) var lastKeychainResult: String?
-    @Published private(set) var schwabAccessExpiry: Date?
-    @Published private(set) var schwabRefreshExpiry: Date?
-    @Published private(set) var webullAccessExpiry: Date?
-    @Published private(set) var webullRefreshExpiry: Date?
-    @Published private(set) var lastConnectionState: [BrokerageProvider: BrokerageConnectionPhase] = [:]
-
-    private init() {}
-
-    func record(status: Int, correlationID: String, errorCode: String?) {
-        lastHTTPStatus = status
-        lastCorrelationID = correlationID
-        lastProviderErrorCode = errorCode
-    }
-
-    func recordKeychain(_ message: String) {
-        lastKeychainResult = message
-    }
-
-    func updateTokenExpiries(schwab: BrokerTokenRecord?, webull: BrokerTokenRecord?) {
-        schwabAccessExpiry = schwab?.expiresAt
-        schwabRefreshExpiry = schwab?.refreshExpiresAt
-        webullAccessExpiry = webull?.expiresAt
-        webullRefreshExpiry = webull?.refreshExpiresAt
-    }
-
-    func setPhase(_ phase: BrokerageConnectionPhase, provider: BrokerageProvider) {
-        lastConnectionState[provider] = phase
     }
 }

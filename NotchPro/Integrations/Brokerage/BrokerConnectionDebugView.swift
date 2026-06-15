@@ -5,6 +5,7 @@
 
 import AppKit
 import SwiftUI
+import NotchProCore
 
 #if DEBUG
 struct BrokerConnectionDebugView: View {

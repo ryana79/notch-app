@@ -7,6 +7,7 @@ import AppKit
 import AuthenticationServices
 import CryptoKit
 import Foundation
+import NotchProCore
 
 @MainActor
 final class SchwabAuthService: NSObject {
@@ -29,8 +30,8 @@ final class SchwabAuthService: NSObject {
         guard config.isSchwabConfigured else { throw BrokerageConnectionError.notConfigured(.schwab) }
 
         let state = UUID().uuidString
-        let verifier = Self.generateCodeVerifier()
-        let challenge = Self.codeChallenge(for: verifier)
+        let verifier = SchwabOAuthHelpers.generateCodeVerifier()
+        let challenge = SchwabOAuthHelpers.codeChallenge(for: verifier)
         pendingState = state
         pendingVerifier = verifier
 
@@ -51,7 +52,7 @@ final class SchwabAuthService: NSObject {
         do {
             let callbackURL = try await startWebAuth(url: authURL, callbackScheme: "https")
             try validateCallback(callbackURL, expectedState: state)
-            guard let code = Self.parseAuthorizationCode(from: callbackURL) else {
+            guard let code = SchwabOAuthHelpers.parseAuthorizationCode(from: callbackURL) else {
                 throw BrokerageConnectionError.missingCode
             }
             return code
@@ -210,37 +211,18 @@ final class SchwabAuthService: NSObject {
         )
     }
 
-    nonisolated static func parseAuthorizationCode(from url: URL) -> String? {
-        URLComponents(url: url, resolvingAgainstBaseURL: false)?
-            .queryItems?
-            .first(where: { $0.name == "code" })?
-            .value
+    static func parseAuthorizationCode(from url: URL) -> String? {
+        SchwabOAuthHelpers.parseAuthorizationCode(from: url)
     }
 
-    nonisolated static func generateCodeVerifier() -> String {
-        var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        return Data(bytes).base64URLEncodedString()
-    }
-
-    nonisolated static func codeChallenge(for verifier: String) -> String {
-        let hash = SHA256.hash(data: Data(verifier.utf8))
-        return Data(hash).base64URLEncodedString()
+    static func codeChallenge(for verifier: String) -> String {
+        SchwabOAuthHelpers.codeChallenge(for: verifier)
     }
 }
 
 extension SchwabAuthService: ASWebAuthenticationPresentationContextProviding {
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         NSApp.keyWindow ?? NSApp.windows.first { $0.isVisible } ?? NSWindow()
-    }
-}
-
-private extension Data {
-    func base64URLEncodedString() -> String {
-        base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
     }
 }
 

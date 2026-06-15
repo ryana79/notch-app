@@ -27,6 +27,7 @@ struct NotchProApp: App {
             userDriverDelegate: nil
         )
         AppUpdateManager.shared.bind(updater: updaterController.updater)
+        BrokerageDiagnostics.wireHTTPLogging()
 
         SettingsWindowController.shared.setUpdaterController(updaterController)
     }

@@ -3,8 +3,8 @@
 //  NotchProTests
 //
 
+import NotchProCore
 import XCTest
-@testable import NotchPro
 
 final class BrokerTokenRecordTests: XCTestCase {
     func testAccessValidWithExpiryBuffer() {
@@ -48,14 +48,14 @@ final class BrokerageConnectionErrorTests: XCTestCase {
 final class SchwabOAuthParsingTests: XCTestCase {
     func testParseAuthorizationCodeFromRedirectURL() {
         let url = URL(string: "https://127.0.0.1:8765/?code=abc123&state=xyz")!
-        XCTAssertEqual(SchwabAuthService.parseAuthorizationCode(from: url), "abc123")
+        XCTAssertEqual(SchwabOAuthHelpers.parseAuthorizationCode(from: url), "abc123")
     }
 
     func testPKCEChallengeIsDeterministic() {
         let verifier = "test-verifier-value"
-        let challenge = SchwabAuthService.codeChallenge(for: verifier)
+        let challenge = SchwabOAuthHelpers.codeChallenge(for: verifier)
         XCTAssertFalse(challenge.isEmpty)
-        XCTAssertEqual(SchwabAuthService.codeChallenge(for: verifier), challenge)
+        XCTAssertEqual(SchwabOAuthHelpers.codeChallenge(for: verifier), challenge)
     }
 }
 

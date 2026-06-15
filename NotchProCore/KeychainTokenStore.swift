@@ -1,31 +1,47 @@
 //
 //  KeychainTokenStore.swift
-//  NotchPro
+//  NotchProCore
 //
 
 import Foundation
 import LocalAuthentication
 import Security
 
-struct BrokerTokenRecord: Codable, Equatable {
-    var accessToken: String
-    var refreshToken: String?
-    var expiresAt: Date
-    var refreshExpiresAt: Date?
-    var providerUserID: String
-    var scopes: String?
+public struct BrokerTokenRecord: Codable, Equatable, Sendable {
+    public var accessToken: String
+    public var refreshToken: String?
+    public var expiresAt: Date
+    public var refreshExpiresAt: Date?
+    public var providerUserID: String
+    public var scopes: String?
 
-    func isAccessValid(buffer: TimeInterval = 180) -> Bool {
+    public init(
+        accessToken: String,
+        refreshToken: String?,
+        expiresAt: Date,
+        refreshExpiresAt: Date?,
+        providerUserID: String,
+        scopes: String?
+    ) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiresAt = expiresAt
+        self.refreshExpiresAt = refreshExpiresAt
+        self.providerUserID = providerUserID
+        self.scopes = scopes
+    }
+
+    public func isAccessValid(buffer: TimeInterval = 180) -> Bool {
         Date().addingTimeInterval(buffer) < expiresAt
     }
 
-    func isRefreshValid(buffer: TimeInterval = 300) -> Bool {
+    public func isRefreshValid(buffer: TimeInterval = 300) -> Bool {
         guard let refreshExpiresAt else { return refreshToken != nil }
         return Date().addingTimeInterval(buffer) < refreshExpiresAt
     }
 }
 
-enum KeychainTokenError: LocalizedError, Equatable {
+public enum KeychainTokenError: LocalizedError, Equatable, Sendable {
     case itemNotFound
     case duplicateItem
     case interactionNotAllowed
@@ -34,7 +50,7 @@ enum KeychainTokenError: LocalizedError, Equatable {
     case saveFailed(OSStatus)
     case decodeFailed
 
-    var debugCode: String {
+    public var debugCode: String {
         switch self {
         case .itemNotFound: return "item_not_found"
         case .duplicateItem: return "duplicate_item"
@@ -46,7 +62,7 @@ enum KeychainTokenError: LocalizedError, Equatable {
         }
     }
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .itemNotFound:
             return "No saved brokerage session was found."
@@ -62,15 +78,14 @@ enum KeychainTokenError: LocalizedError, Equatable {
     }
 }
 
-enum KeychainTokenStore {
-    static let service = "com.ryana79.notchpro.brokerage.tokens"
-    private static let migrationKey = "brokerage.tokens.migrated.v1"
+public enum KeychainTokenStore {
+    public static let service = "com.ryana79.notchpro.brokerage.tokens"
 
-    static func accountKey(provider: BrokerageProvider, userID: String = "default") -> String {
+    public static func accountKey(provider: BrokerageProvider, userID: String = "default") -> String {
         "\(provider.rawValue).\(userID)"
     }
 
-    static func save(_ record: BrokerTokenRecord, provider: BrokerageProvider) throws {
+    public static func save(_ record: BrokerTokenRecord, provider: BrokerageProvider) throws {
         let data = try JSONEncoder().encode(record)
         let account = accountKey(provider: provider, userID: record.providerUserID)
 
@@ -91,7 +106,7 @@ enum KeychainTokenStore {
         }
     }
 
-    static func load(provider: BrokerageProvider, userID: String = "default") throws -> BrokerTokenRecord {
+    public static func load(provider: BrokerageProvider, userID: String = "default") throws -> BrokerTokenRecord {
         let context = LAContext()
         context.interactionNotAllowed = true
 
@@ -130,50 +145,12 @@ enum KeychainTokenStore {
         return record
     }
 
-    static func delete(provider: BrokerageProvider, userID: String = "default") {
+    public static func delete(provider: BrokerageProvider, userID: String = "default") {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: accountKey(provider: provider, userID: userID),
         ]
         SecItemDelete(query as CFDictionary)
-    }
-
-    static func migrateFromLegacyIfNeeded() {
-        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
-
-        if let access = KeychainStore.load(account: BrokerCredentialKey.schwabAccessToken) {
-            let refresh = KeychainStore.load(account: BrokerCredentialKey.schwabRefreshToken)
-            let expiryString = KeychainStore.load(account: BrokerCredentialKey.schwabTokenExpiry)
-            let expiry = expiryString.flatMap { TimeInterval($0) }.map { Date(timeIntervalSince1970: $0) }
-                ?? Date().addingTimeInterval(1800)
-            let record = BrokerTokenRecord(
-                accessToken: access,
-                refreshToken: refresh,
-                expiresAt: expiry,
-                refreshExpiresAt: nil,
-                providerUserID: "default",
-                scopes: nil
-            )
-            try? save(record, provider: .schwab)
-        }
-
-        if let access = KeychainStore.load(account: BrokerCredentialKey.webullAccessToken) {
-            let expiryString = KeychainStore.load(account: BrokerCredentialKey.webullTokenExpiry)
-            let expiry = expiryString.flatMap { TimeInterval($0) }.map { Date(timeIntervalSince1970: $0) }
-                ?? Date().addingTimeInterval(30 * 60)
-            let accountID = KeychainStore.load(account: BrokerCredentialKey.webullAccountID) ?? "default"
-            let record = BrokerTokenRecord(
-                accessToken: access,
-                refreshToken: nil,
-                expiresAt: expiry,
-                refreshExpiresAt: Date().addingTimeInterval(15 * 24 * 3600),
-                providerUserID: accountID,
-                scopes: nil
-            )
-            try? save(record, provider: .webull)
-        }
-
-        UserDefaults.standard.set(true, forKey: migrationKey)
     }
 }

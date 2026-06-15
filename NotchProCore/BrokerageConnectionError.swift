@@ -1,15 +1,15 @@
 //
 //  BrokerageConnectionError.swift
-//  NotchPro
+//  NotchProCore
 //
 
 import Foundation
 
-enum BrokerageProvider: String, CaseIterable, Codable {
+public enum BrokerageProvider: String, CaseIterable, Codable, Sendable {
     case schwab
     case webull
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .schwab: return "Schwab"
         case .webull: return "Webull"
@@ -17,7 +17,7 @@ enum BrokerageProvider: String, CaseIterable, Codable {
     }
 }
 
-enum BrokerageConnectionPhase: Equatable {
+public enum BrokerageConnectionPhase: Equatable, Sendable {
     case disconnected
     case authorizing
     case exchangingCode
@@ -28,7 +28,7 @@ enum BrokerageConnectionPhase: Equatable {
     case failed(String)
 }
 
-enum BrokerageConnectionError: LocalizedError, Equatable {
+public enum BrokerageConnectionError: LocalizedError, Equatable, Sendable {
     case loginCancelled
     case authorizationExpired
     case codeExchangeFailed
@@ -47,7 +47,7 @@ enum BrokerageConnectionError: LocalizedError, Equatable {
     case providerMessage(String, debugCode: String)
     case apiHTTP(status: Int, debugCode: String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .loginCancelled:
             return "Login was cancelled."
@@ -89,7 +89,7 @@ enum BrokerageConnectionError: LocalizedError, Equatable {
         }
     }
 
-    var debugCode: String {
+    public var debugCode: String {
         switch self {
         case .loginCancelled: return "auth_cancelled"
         case .authorizationExpired: return "auth_expired"
@@ -111,7 +111,7 @@ enum BrokerageConnectionError: LocalizedError, Equatable {
         }
     }
 
-    var isRetryable: Bool {
+    public var isRetryable: Bool {
         switch self {
         case .rateLimited, .providerUnavailable, .networkUnavailable:
             return true
@@ -122,7 +122,7 @@ enum BrokerageConnectionError: LocalizedError, Equatable {
         }
     }
 
-    var requiresReauthorization: Bool {
+    public var requiresReauthorization: Bool {
         switch self {
         case .invalidGrant, .sessionExpired, .authorizationExpired, .invalidClient:
             return true

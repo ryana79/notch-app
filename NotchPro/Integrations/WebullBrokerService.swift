@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import NotchProCore
 
 @MainActor
 final class WebullBrokerService {

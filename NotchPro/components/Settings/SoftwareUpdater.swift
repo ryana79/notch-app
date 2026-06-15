@@ -12,6 +12,7 @@ final class AppUpdateManager: NSObject, ObservableObject {
 
     @Published private(set) var updateAvailable = false
     @Published private(set) var latestVersion: String?
+    @Published private(set) var updateStatusNote: String?
     @Published private(set) var isChecking = false
     @Published private(set) var lastChecked: Date?
 
@@ -51,6 +52,7 @@ final class AppUpdateManager: NSObject, ObservableObject {
         latestVersion = nil
         isChecking = false
         lastChecked = Date()
+        updateStatusNote = Self.noUpdateExplanation()
     }
 
     func markUpdateFound(version: String) {
@@ -58,6 +60,17 @@ final class AppUpdateManager: NSObject, ObservableObject {
         latestVersion = version
         isChecking = false
         lastChecked = Date()
+        updateStatusNote = nil
+    }
+
+    private static func noUpdateExplanation() -> String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        #if DEBUG
+        return "No published update found. You're on \(version) (\(build)) from a local/dev build. Sparkle only offers versions listed in the GitHub release appcast — not unreleased Xcode builds."
+        #else
+        return "You're up to date on \(version) (\(build)). New versions appear after a GitHub release is published."
+        #endif
     }
 }
 
@@ -147,6 +160,13 @@ struct CheckForUpdatesView: View {
                 Text("Last checked \(lastChecked, style: .relative) ago")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+            }
+
+            if let note = updates.updateStatusNote, !updates.updateAvailable {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

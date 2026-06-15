@@ -5,6 +5,7 @@
 
 import Defaults
 import Foundation
+import NotchProCore
 
 struct PortfolioHolding: Identifiable, Equatable {
     let id: String

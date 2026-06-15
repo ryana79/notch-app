@@ -5,6 +5,7 @@
 
 import Combine
 import Foundation
+import NotchProCore
 
 @MainActor
 final class BrokerageConnectionManager: ObservableObject {

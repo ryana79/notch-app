@@ -5,6 +5,7 @@
 
 import CryptoKit
 import Foundation
+import NotchProCore
 
 @MainActor
 final class WebullAuthService {

@@ -183,15 +183,21 @@
 		B1WRKT012E70000100000002 /* WorkoutGlanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1WRKT012E70000100000002 /* WorkoutGlanceView.swift */; };
 		B1BRK012E70000100000001 /* NotchDisplayLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000001 /* NotchDisplayLayout.swift */; };
 		B1BRK012E70000100000002 /* NotchLayoutDebugger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000002 /* NotchLayoutDebugger.swift */; };
-		B1BRK012E70000100000003 /* BrokerageConnectionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000003 /* BrokerageConnectionError.swift */; };
-		B1BRK012E70000100000004 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000004 /* KeychainTokenStore.swift */; };
-		B1BRK012E70000100000005 /* BrokerHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000005 /* BrokerHTTPClient.swift */; };
 		B1BRK012E70000100000006 /* SchwabAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000006 /* SchwabAuthService.swift */; };
 		B1BRK012E70000100000007 /* WebullAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000007 /* WebullAuthService.swift */; };
 		B1BRK012E70000100000008 /* BrokerageConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000008 /* BrokerageConnectionManager.swift */; };
 		B1BRK012E70000100000009 /* BrokerConnectionDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000009 /* BrokerConnectionDebugView.swift */; };
 		B1BRK012E70000100000010 /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000010 /* AuthenticationServices.framework */; };
 		B1BRK012E70000100000011 /* BrokerageConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1BRK012E70000100000011 /* BrokerageConnectionTests.swift */; };
+
+		B1CORE012E70000100000001 /* BrokerageConnectionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000001 /* BrokerageConnectionError.swift */; };
+		B1CORE012E70000100000002 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000002 /* KeychainTokenStore.swift */; };
+		B1CORE012E70000100000003 /* BrokerHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000003 /* BrokerHTTPClient.swift */; };
+		B1CORE012E70000100000004 /* SchwabOAuthHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000004 /* SchwabOAuthHelpers.swift */; };
+		B1CORE012E70000100000005 /* NotchProCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000005 /* NotchProCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B1CORE012E70000100000006 /* NotchProCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000005 /* NotchProCore.framework */; };
+		B1CORE012E70000100000007 /* KeychainTokenStore+Migration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000007 /* KeychainTokenStore+Migration.swift */; };
+		B1CORE012E70000100000008 /* BrokerageDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1CORE012E70000100000008 /* BrokerageDiagnostics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -202,12 +208,12 @@
 			remoteGlobalIDString = 11F7484E2EC9AABA00F841DB;
 			remoteInfo = NotchProXPCHelper;
 		};
-		A1BRK012E70000100000019 /* PBXContainerItemProxy */ = {
+		A1CORE012E70000100000026 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 14CEF40A2C5CAED200855D72 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 14CEF4112C5CAED300855D72;
-			remoteInfo = NotchPro;
+			remoteGlobalIDString = A1CORE012E70000100000020;
+			remoteInfo = NotchProCore;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -217,10 +223,15 @@
 			target = 11F7484E2EC9AABA00F841DB /* NotchProXPCHelper */;
 			targetProxy = 11F748592EC9AABA00F841DB /* PBXContainerItemProxy */;
 		};
+		A1CORE012E70000100000027 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1CORE012E70000100000020 /* NotchProCore */;
+			targetProxy = A1CORE012E70000100000026 /* PBXContainerItemProxy */;
+		};
 		A1BRK012E70000100000018 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 14CEF4112C5CAED300855D72 /* boringNotch */;
-			targetProxy = A1BRK012E70000100000019 /* PBXContainerItemProxy */;
+			target = A1CORE012E70000100000020 /* NotchProCore */;
+			targetProxy = A1CORE012E70000100000026 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -243,6 +254,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				117AB5172E30E09C00558921 /* MediaRemoteAdapter.framework in Embed Frameworks */,
+				B1CORE012E70000100000005 /* NotchProCore.framework in Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -418,9 +430,6 @@
 		A1WRKT012E70000100000002 /* WorkoutGlanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutGlanceView.swift; sourceTree = "<group>"; };
 		A1BRK012E70000100000001 /* NotchDisplayLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchDisplayLayout.swift; sourceTree = "<group>"; };
 		A1BRK012E70000100000002 /* NotchLayoutDebugger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchLayoutDebugger.swift; sourceTree = "<group>"; };
-		A1BRK012E70000100000003 /* BrokerageConnectionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerageConnectionError.swift; sourceTree = "<group>"; };
-		A1BRK012E70000100000004 /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
-		A1BRK012E70000100000005 /* BrokerHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerHTTPClient.swift; sourceTree = "<group>"; };
 		A1BRK012E70000100000006 /* SchwabAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchwabAuthService.swift; sourceTree = "<group>"; };
 		A1BRK012E70000100000007 /* WebullAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebullAuthService.swift; sourceTree = "<group>"; };
 		A1BRK012E70000100000008 /* BrokerageConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerageConnectionManager.swift; sourceTree = "<group>"; };
@@ -428,6 +437,14 @@
 		A1BRK012E70000100000010 /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		A1BRK012E70000100000011 /* BrokerageConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerageConnectionTests.swift; sourceTree = "<group>"; };
 		A1BRK012E70000100000012 /* NotchProTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NotchProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+
+		A1CORE012E70000100000001 /* BrokerageConnectionError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerageConnectionError.swift; sourceTree = "<group>"; };
+		A1CORE012E70000100000002 /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
+		A1CORE012E70000100000003 /* BrokerHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerHTTPClient.swift; sourceTree = "<group>"; };
+		A1CORE012E70000100000004 /* SchwabOAuthHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchwabOAuthHelpers.swift; sourceTree = "<group>"; };
+		A1CORE012E70000100000005 /* NotchProCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = NotchProCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1CORE012E70000100000007 /* KeychainTokenStore+Migration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "KeychainTokenStore+Migration.swift"; sourceTree = "<group>"; };
+		A1CORE012E70000100000008 /* BrokerageDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerageDiagnostics.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -471,6 +488,7 @@
 				111BE95D2ECD71E10079DD4E /* AsyncXPCConnection in Frameworks */,
 				B1628B922CC260C0003D8DF3 /* SwiftUIIntrospect in Frameworks */,
 				B1BRK012E70000100000010 /* AuthenticationServices.framework in Frameworks */,
+				B1CORE012E70000100000005 /* NotchProCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -478,6 +496,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1CORE012E70000100000006 /* NotchProCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -618,14 +637,25 @@
 			path = Integrations;
 			sourceTree = "<group>";
 		};
+
+		A1COREGRP2E70000100000001 /* NotchProCore */ = {
+			isa = PBXGroup;
+			children = (
+				A1CORE012E70000100000001 /* BrokerageConnectionError.swift */,
+				A1CORE012E70000100000002 /* KeychainTokenStore.swift */,
+				A1CORE012E70000100000003 /* BrokerHTTPClient.swift */,
+				A1CORE012E70000100000004 /* SchwabOAuthHelpers.swift */,
+			);
+			path = NotchProCore;
+			sourceTree = "<group>";
+		};
 		A1BRKGRP2E70000100000001 /* Brokerage */ = {
 			isa = PBXGroup;
 			children = (
-				A1BRK012E70000100000003 /* BrokerageConnectionError.swift */,
+				A1CORE012E70000100000007 /* KeychainTokenStore+Migration.swift */,
+				A1CORE012E70000100000008 /* BrokerageDiagnostics.swift */,
 				A1BRK012E70000100000008 /* BrokerageConnectionManager.swift */,
-				A1BRK012E70000100000005 /* BrokerHTTPClient.swift */,
 				A1BRK012E70000100000009 /* BrokerConnectionDebugView.swift */,
-				A1BRK012E70000100000004 /* KeychainTokenStore.swift */,
 				A1BRK012E70000100000006 /* SchwabAuthService.swift */,
 				A1BRK012E70000100000007 /* WebullAuthService.swift */,
 			);
@@ -806,6 +836,7 @@
 			children = (
 				112B0EB62E30DD0F00562D6C /* mediaremote-adapter */,
 				14CEF4142C5CAED300855D72 /* boringNotch */,
+				A1COREGRP2E70000100000001 /* NotchProCore */,
 				A1BRKGRP2E70000100000002 /* NotchProTests */,
 				11F748502EC9AABA00F841DB /* NotchProXPCHelper */,
 				14CEF4132C5CAED300855D72 /* Products */,
@@ -817,6 +848,7 @@
 			isa = PBXGroup;
 			children = (
 				14CEF4122C5CAED300855D72 /* boringNotch.app */,
+				A1CORE012E70000100000005 /* NotchProCore.framework */,
 				A1BRK012E70000100000012 /* NotchProTests.xctest */,
 				11F7484F2EC9AABA00F841DB /* NotchProXPCHelper.xpc */,
 			);
@@ -1068,6 +1100,7 @@
 			);
 			dependencies = (
 				11F7485A2EC9AABA00F841DB /* PBXTargetDependency */,
+				A1CORE012E70000100000027 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				112FB72F2CCF12CC0015238C /* private */,
@@ -1108,6 +1141,24 @@
 			productName = NotchProTests;
 			productReference = A1BRK012E70000100000012 /* NotchProTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+
+		A1CORE012E70000100000020 /* NotchProCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1CORE012E70000100000025 /* Build configuration list for PBXNativeTarget "NotchProCore" */;
+			buildPhases = (
+				A1CORE012E70000100000021 /* Sources */,
+				A1CORE012E70000100000022 /* Frameworks */,
+				A1CORE012E70000100000024 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NotchProCore;
+			productName = NotchProCore;
+			productReference = A1CORE012E70000100000005 /* NotchProCore.framework */;
+			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
@@ -1155,6 +1206,7 @@
 			projectRoot = "";
 			targets = (
 				14CEF4112C5CAED300855D72 /* boringNotch */,
+				A1CORE012E70000100000020 /* NotchProCore */,
 				A1BRK012E70000100000013 /* NotchProTests */,
 				11F7484E2EC9AABA00F841DB /* NotchProXPCHelper */,
 			);
@@ -1358,13 +1410,12 @@
 				B1F0A0022E60000100000001 /* BrightnessManager.swift in Sources */,
 				B1BRK012E70000100000001 /* NotchDisplayLayout.swift in Sources */,
 				B1BRK012E70000100000002 /* NotchLayoutDebugger.swift in Sources */,
-				B1BRK012E70000100000003 /* BrokerageConnectionError.swift in Sources */,
-				B1BRK012E70000100000004 /* KeychainTokenStore.swift in Sources */,
-				B1BRK012E70000100000005 /* BrokerHTTPClient.swift in Sources */,
 				B1BRK012E70000100000006 /* SchwabAuthService.swift in Sources */,
 				B1BRK012E70000100000007 /* WebullAuthService.swift in Sources */,
 				B1BRK012E70000100000008 /* BrokerageConnectionManager.swift in Sources */,
 				B1BRK012E70000100000009 /* BrokerConnectionDebugView.swift in Sources */,
+				B1CORE012E70000100000007 /* KeychainTokenStore+Migration.swift in Sources */,
+				B1CORE012E70000100000008 /* BrokerageDiagnostics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1373,6 +1424,32 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1BRK012E70000100000011 /* BrokerageConnectionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+
+		A1CORE012E70000100000021 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1CORE012E70000100000001 /* BrokerageConnectionError.swift in Sources */,
+				B1CORE012E70000100000002 /* KeychainTokenStore.swift in Sources */,
+				B1CORE012E70000100000003 /* BrokerHTTPClient.swift in Sources */,
+				B1CORE012E70000100000004 /* SchwabOAuthHelpers.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1CORE012E70000100000022 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1CORE012E70000100000024 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1667,7 +1744,6 @@
 		A1BRK012E70000100000020 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 18;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1676,14 +1752,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NotchPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NotchPro";
 			};
 			name = Debug;
 		};
 		A1BRK012E70000100000021 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 18;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1692,7 +1766,67 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NotchPro.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NotchPro";
+			};
+			name = Release;
+		};
+
+		A1CORE012E70000100000030 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 18;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro.core;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		A1CORE012E70000100000031 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 18;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ryana79.notchpro.core;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
 			};
 			name = Release;
 		};
@@ -1731,6 +1865,16 @@
 			buildConfigurations = (
 				A1BRK012E70000100000020 /* Debug */,
 				A1BRK012E70000100000021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+
+		A1CORE012E70000100000025 /* Build configuration list for PBXNativeTarget "NotchProCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1CORE012E70000100000030 /* Debug */,
+				A1CORE012E70000100000031 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

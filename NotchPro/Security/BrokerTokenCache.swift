@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import NotchProCore
 
 /// In-memory broker token cache — one keychain read per session, not per API call.
 @MainActor

@@ -6,6 +6,7 @@
 import Combine
 import Defaults
 import Foundation
+import NotchProCore
 
 @MainActor
 final class PortfolioManager: ObservableObject {
