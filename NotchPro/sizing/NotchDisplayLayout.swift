@@ -252,8 +252,7 @@ struct NotchDisplayLayout {
     return CGSize(width: width, height: height)
 }
 
-@MainActor func getStatusRailMinWidth(for layout: NotchDisplayLayout) -> CGFloat {
-    let closed = layout.closedIslandSize()
+@MainActor func statusRailContentMinWidth() -> CGFloat {
     var width: CGFloat = 24
 
     if Defaults[.showWeatherGlance] { width += 118 }
@@ -263,7 +262,11 @@ struct NotchDisplayLayout {
     if Defaults[.showFocusTimer] { width += 50 }
     if Defaults[.showBatteryIndicator] { width += 54 }
 
-    return min(max(closed.width, width), layout.maxSafeIslandWidth)
+    return width
+}
+
+@MainActor func getStatusRailMinWidth(for layout: NotchDisplayLayout) -> CGFloat {
+    min(max(statusRailContentMinWidth(), 120), layout.maxSafeIslandWidth)
 }
 
 @MainActor func getStatusRailMinWidth(screenUUID: String? = nil) -> CGFloat {
