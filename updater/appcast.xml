@@ -6,6 +6,17 @@
         <description>NotchPro updates for macOS</description>
         <language>en</language>
         <item>
+            <title>1.0.17</title>
+            <pubDate>Mon, 15 Jun 2026 06:24:30 +0000</pubDate>
+            <link>https://github.com/ryana79/notch-app/releases</link>
+            <sparkle:version>20</sparkle:version>
+            <sparkle:shortVersionString>1.0.17</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[NotchPro v1.0.17
+]]></description>
+            <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.17/NotchPro.dmg" length="13810636" type="application/octet-stream" sparkle:edSignature="Nciecb7T2c1tCZ2jXRDfwXMQr46VSxx2p41SBqGf/KCVds5sIDuk1K7x7trd2rj59WjpqDeYsMKXmys6O2UeBg=="/>
+        </item>
+        <item>
             <title>1.0.16</title>
             <pubDate>Mon, 15 Jun 2026 06:20:01 +0000</pubDate>
             <link>https://github.com/ryana79/notch-app/releases</link>
@@ -26,17 +37,6 @@
             <description><![CDATA[NotchPro v1.0.15
 ]]></description>
             <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.15/NotchPro.dmg" length="13795160" type="application/octet-stream" sparkle:edSignature="4UsBEjp226EwC+iklB4bVy6pC1ZKm4JwR07/8XvuQIUi3JY1JBU9L+0DA9BkCX/Iw1wsmjp6FCXbDfXmzbo+AQ=="/>
-        </item>
-        <item>
-            <title>1.0.14</title>
-            <pubDate>Sun, 07 Jun 2026 03:43:44 +0000</pubDate>
-            <link>https://github.com/ryana79/notch-app/releases</link>
-            <sparkle:version>17</sparkle:version>
-            <sparkle:shortVersionString>1.0.14</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[NotchPro v1.0.14
-]]></description>
-            <enclosure url="https://github.com/ryana79/notch-app/releases/download/v1.0.14/NotchPro.dmg" length="13507901" type="application/octet-stream" sparkle:edSignature="0c52o9Lar+pYM16zyEHwJJDkRw6lq95YSjFG/gYeVw7AXUo0PmLspvynsqjFDavBM0HIqmXtEB5KNoJcXtrHDw=="/>
         </item>
     </channel>
 </rss>
