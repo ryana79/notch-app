@@ -3,7 +3,6 @@
 //  NotchPro
 //
 
-import CryptoKit
 import Foundation
 import NotchProCore
 
@@ -12,8 +11,14 @@ final class WebullAuthService {
     static let shared = WebullAuthService()
 
     private let host = "api.webull.com"
+    private let session: URLSession
 
-    private init() {}
+    private init() {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 25
+        config.timeoutIntervalForResource = 40
+        session = URLSession(configuration: config)
+    }
 
     func connect(onPendingVerification: (() -> Void)? = nil) async throws -> BrokerTokenRecord {
         guard BrokerConfig.shared.isWebullConfigured else {
@@ -100,42 +105,7 @@ final class WebullAuthService {
             appSecret: appSecret,
             accessToken: accessToken
         )
-        let response = try await BrokerHTTPClient.data(for: request)
-        return (response.data, response.statusCode)
-    }
-
-    static func generateSignature(
-        path: String,
-        query: [String: String],
-        bodyString: String?,
-        appKey: String,
-        appSecret: String,
-        host: String,
-        timestamp: String,
-        nonce: String
-    ) -> String {
-        var params: [String: String] = query
-        params["host"] = host
-        params["x-app-key"] = appKey
-        params["x-signature-algorithm"] = "HMAC-SHA1"
-        params["x-signature-nonce"] = nonce
-        params["x-signature-version"] = "1.0"
-        params["x-timestamp"] = timestamp
-
-        let str1 = params.keys.sorted().map { "\($0)=\(params[$0] ?? "")" }.joined(separator: "&")
-        let str3: String
-        if let bodyString, !bodyString.isEmpty {
-            let md5 = Insecure.MD5.hash(data: Data(bodyString.utf8))
-            let str2 = md5.map { String(format: "%02X", $0) }.joined()
-            str3 = "\(path)&\(str1)&\(str2)"
-        } else {
-            str3 = "\(path)&\(str1)"
-        }
-
-        let encoded = fullyPercentEncode(str3)
-        let key = SymmetricKey(data: Data("\(appSecret)&".utf8))
-        let mac = HMAC<Insecure.SHA1>.authenticationCode(for: Data(encoded.utf8), using: key)
-        return Data(mac).base64EncodedString()
+        return try await perform(request)
     }
 
     // MARK: - Private
@@ -215,7 +185,7 @@ final class WebullAuthService {
     }
 
     private func checkToken(appKey: String, appSecret: String, token: String) async throws -> [String: Any] {
-        let body = try JSONSerialization.data(withJSONObject: ["token": token])
+        let body = try WebullSignatureHelpers.compactJSONBody(["token": token])
         let (data, status) = try await signedTokenRequest(
             method: "POST",
             path: "/openapi/auth/token/check",
@@ -243,8 +213,7 @@ final class WebullAuthService {
             appSecret: appSecret,
             accessToken: nil
         )
-        let response = try await BrokerHTTPClient.data(for: request)
-        return (response.data, response.statusCode)
+        return try await perform(request)
     }
 
     private func buildSignedRequest(
@@ -256,10 +225,10 @@ final class WebullAuthService {
         appSecret: String,
         accessToken: String?
     ) throws -> URLRequest {
-        let timestamp = Self.utcTimestamp()
+        let timestamp = WebullSignatureHelpers.utcTimestamp()
         let nonce = UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let bodyString = body.flatMap { String(data: $0, encoding: .utf8) }
-        let signature = Self.generateSignature(
+        let signature = WebullSignatureHelpers.generateSignature(
             path: path,
             query: query,
             bodyString: bodyString,
@@ -287,6 +256,7 @@ final class WebullAuthService {
         request.setValue("1.0", forHTTPHeaderField: "x-signature-version")
         request.setValue(nonce, forHTTPHeaderField: "x-signature-nonce")
         request.setValue("v2", forHTTPHeaderField: "x-version")
+        request.setValue(host, forHTTPHeaderField: "host")
         if let accessToken {
             request.setValue(accessToken, forHTTPHeaderField: "x-access-token")
         }
@@ -297,17 +267,14 @@ final class WebullAuthService {
         return request
     }
 
-    private static func fullyPercentEncode(_ value: String) -> String {
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        return value.addingPercentEncoding(withAllowedCharacters: allowed.inverted) ?? value
-    }
-
-    private static func utcTimestamp() -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        return formatter.string(from: Date())
+    private func perform(_ request: URLRequest) async throws -> (Data, Int) {
+        let correlationID = UUID().uuidString
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw BrokerageConnectionError.networkUnavailable
+        }
+        BrokerHTTPClient.onResponse?(http.statusCode, correlationID)
+        return (data, http.statusCode)
     }
 
     private func parseJSONObject(_ data: Data) throws -> [String: Any] {
@@ -320,13 +287,24 @@ final class WebullAuthService {
         return json
     }
 
+    private func webullHTTPError(status: Int, data: Data, debugCode: String) -> BrokerageConnectionError {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = json["message"] as? String,
+           !message.isEmpty {
+            return .providerMessage(message, debugCode: debugCode)
+        }
+        if status == 401 {
+            return .providerMessage(
+                "Webull rejected the request (HTTP 401). Confirm this build has valid Webull App Key/Secret, then try Connect again.",
+                debugCode: "webull_unauthorized"
+            )
+        }
+        return .apiHTTP(status: status, debugCode: debugCode)
+    }
+
     private func validateTokenHTTP(status: Int, data: Data) throws {
         guard (200...299).contains(status) else {
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let message = json["message"] as? String {
-                throw BrokerageConnectionError.providerMessage(message, debugCode: "webull_token_http")
-            }
-            throw BrokerageConnectionError.apiHTTP(status: status, debugCode: "webull_token_http")
+            throw webullHTTPError(status: status, data: data, debugCode: "webull_token_http")
         }
     }
 
@@ -335,7 +313,7 @@ final class WebullAuthService {
             if status == 401 {
                 throw BrokerageConnectionError.sessionExpired
             }
-            throw BrokerageConnectionError.apiHTTP(status: status, debugCode: "webull_api")
+            throw webullHTTPError(status: status, data: data, debugCode: "webull_api")
         }
     }
 }

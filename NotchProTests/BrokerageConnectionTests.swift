@@ -67,3 +67,66 @@ final class KeychainTokenStoreTests: XCTestCase {
         )
     }
 }
+
+final class WebullSignatureTests: XCTestCase {
+    func testEmptyJSONObjectOmitsBodyMD5FromSignature() {
+        let args = (
+            path: "/openapi/auth/token/create",
+            query: [String: String](),
+            appKey: "demo_key",
+            appSecret: "demo_secret",
+            host: "api.webull.com",
+            timestamp: "2025-11-13T01:37:20Z",
+            nonce: "abc123"
+        )
+
+        let withoutBody = WebullSignatureHelpers.generateSignature(
+            path: args.path,
+            query: args.query,
+            bodyString: nil,
+            appKey: args.appKey,
+            appSecret: args.appSecret,
+            host: args.host,
+            timestamp: args.timestamp,
+            nonce: args.nonce
+        )
+        let withEmptyObject = WebullSignatureHelpers.generateSignature(
+            path: args.path,
+            query: args.query,
+            bodyString: "{}",
+            appKey: args.appKey,
+            appSecret: args.appSecret,
+            host: args.host,
+            timestamp: args.timestamp,
+            nonce: args.nonce
+        )
+
+        XCTAssertEqual(withoutBody, withEmptyObject)
+        XCTAssertFalse(withEmptyObject.isEmpty)
+    }
+
+    func testTokenCheckBodyIncludesMD5() {
+        let withTokenBody = WebullSignatureHelpers.generateSignature(
+            path: "/openapi/auth/token/check",
+            query: [:],
+            bodyString: #"{"token":"abc123"}"#,
+            appKey: "demo_key",
+            appSecret: "demo_secret",
+            host: "api.webull.com",
+            timestamp: "2025-11-13T01:37:20Z",
+            nonce: "abc123"
+        )
+        let withoutBody = WebullSignatureHelpers.generateSignature(
+            path: "/openapi/auth/token/check",
+            query: [:],
+            bodyString: nil,
+            appKey: "demo_key",
+            appSecret: "demo_secret",
+            host: "api.webull.com",
+            timestamp: "2025-11-13T01:37:20Z",
+            nonce: "abc123"
+        )
+
+        XCTAssertNotEqual(withTokenBody, withoutBody)
+    }
+}
