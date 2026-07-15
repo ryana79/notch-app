@@ -14,7 +14,7 @@ on:
       xcode_version:
         required: false
         type: string
-        default: "16.4"
+        default: "26.5"
       code_sign_identity:
         required: false
         type: string
@@ -66,15 +66,31 @@ jobs:
           security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
           security list-keychain -d user -s "$KC"
 
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
+      - name: Select Xcode
         run: |
+          set -euo pipefail
           XCODE_PATH="/Applications/Xcode_${XCODE_VERSION}.app"
           if [[ ! -d "$XCODE_PATH" ]]; then
-            echo "::error::Xcode ${XCODE_VERSION} not found at ${XCODE_PATH}"
-            echo "Available Xcode versions:"
+            echo "Xcode ${XCODE_VERSION} not found; falling back to runner default"
+            for candidate in \
+              "/Applications/Xcode_26.5.app" \
+              "/Applications/Xcode_26.4.1.app" \
+              "/Applications/Xcode.app"; do
+              if [[ -d "$candidate" ]]; then
+                XCODE_PATH="$candidate"
+                break
+              fi
+            done
+          fi
+          if [[ ! -d "$XCODE_PATH" ]]; then
+            XCODE_PATH="$(ls -1d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1 || true)"
+          fi
+          if [[ -z "${XCODE_PATH:-}" || ! -d "$XCODE_PATH" ]]; then
+            echo "::error::No Xcode installation found under /Applications"
             ls -d /Applications/Xcode*.app 2>/dev/null || echo "  (none found)"
             exit 1
           fi
+          echo "Using $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH"
           xcodebuild -version
 
